@@ -21,6 +21,8 @@ export default (
             <body>
                 <h2>Error occured</h2>
                 <pre>${ex}</pre>
+                <h3>Helper functions defined:<h4>
+                <pre>[${helperFunctionInfos.map(hfi => hfi.name).join(', ')}]<pre>
             </body>
         `;
   }

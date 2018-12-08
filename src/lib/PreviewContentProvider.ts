@@ -19,6 +19,11 @@ const resolveFileOrText = fileName => {
     }
 }
 
+const requireUncached = module => {
+  delete require.cache[require.resolve(module)]
+  return require(module)
+}
+
 export default class HtmlDocumentContentProvider implements TextDocumentContentProvider {
     private _onDidChange = new EventEmitter<Uri>();
     private _fileName: string;
@@ -61,7 +66,7 @@ export default class HtmlDocumentContentProvider implements TextDocumentContentP
             templateSource = resolveFileOrText(fileName);
             dataSource = resolveFileOrText(dataFileName);
 
-            helperFunctionInfos = require(helperFunctionFileName) || [];
+            helperFunctionInfos = requireUncached(helperFunctionFileName) || [];
             if (!Array.isArray(helperFunctionInfos)) {
               console.error(`Expected ${helperFunctionFileName} to export an array. Got ${JSON.stringify(helperFunctionInfos)} instead`);
               helperFunctionInfos = [];
