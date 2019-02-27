@@ -1,7 +1,7 @@
 {
-  "name": "handlebars-preview",
-  "displayName": "Handlebars Preview",
-  "description": "Live preview for Handlebar templates",
+  "name": "handlebars-preview-with-function-support",
+  "displayName": "Handlebars Preview with helper functions support",
+  "description": "Live preview for Handlebar templates (with support for helper functions)",
   "version": "1.1.0",
   "publisher": "anonimitoraf",
   "engines": {
@@ -10,7 +10,7 @@
   "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chaliy/vscode-handlebars-preview"
+    "url": "https://github.com/anonimitoraf/vscode-handlebars-preview"
   },
   "galleryBanner": {
     "color": "#0F6378",
