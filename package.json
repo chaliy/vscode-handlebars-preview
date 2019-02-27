@@ -1,16 +1,16 @@
 {
-  "name": "handlebars-preview",
-  "displayName": "Handlebars Preview",
-  "description": "Live preview for Handlebar templates",
-  "version": "1.0.0",
-  "publisher": "chaliy",
+  "name": "handlebars-preview-with-function-support",
+  "displayName": "Handlebars Preview with helper functions support",
+  "description": "Live preview for Handlebar templates (with support for helper functions)",
+  "version": "1.2.0",
+  "publisher": "anonimitoraf",
   "engines": {
     "vscode": "^1.5.0"
   },
   "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chaliy/vscode-handlebars-preview"
+    "url": "https://github.com/anonimitoraf/vscode-handlebars-preview"
   },
   "galleryBanner": {
     "color": "#0F6378",
@@ -28,15 +28,19 @@
   ],
   "main": "./out/src/extension",
   "contributes": {
-    "commands": [{
-      "command": "handlebarsPreview.preview",
-      "title": "Handlebars: Open Preview"
-    }],
-    "keybindings": [{
-      "command": "handlebarsPreview.preview",
-      "key": "ctrl+p h",
-      "when": "!terminalFocus"
-    }]
+    "commands": [
+      {
+        "command": "handlebarsPreview.preview",
+        "title": "Handlebars: Open Preview"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "handlebarsPreview.preview",
+        "key": "ctrl+p h",
+        "when": "!terminalFocus"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
