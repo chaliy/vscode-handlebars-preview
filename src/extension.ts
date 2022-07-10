@@ -3,33 +3,29 @@ import {
     ExtensionContext, TextEditorSelectionChangeEvent, TextDocumentChangeEvent
 } from "vscode";
 
-import PreviewContentProvider from './lib/PreviewContentProvider';
-import PREVIEW_URL from './lib/PREVIEW_URI';
-import preview from './lib/preview';
+import { PreviewPanel } from './lib/PreviewPanel';
 
 export function activate(context: ExtensionContext) {
-
-    let provider = new PreviewContentProvider();
-
     context.subscriptions.push(
-        // Preview providers
-        workspace.registerTextDocumentContentProvider("handlebars-preview", provider),
-
         // Global handlers
         window.onDidChangeTextEditorSelection((e: TextEditorSelectionChangeEvent) => {
             if (e.textEditor === window.activeTextEditor) {
-                provider.update(PREVIEW_URL);
+                PreviewPanel.update();
             }
         }),
         workspace.onDidChangeTextDocument((e: TextDocumentChangeEvent) => {
-            if (e.document === window.activeTextEditor.document) {
-                provider.update(PREVIEW_URL);
+            // Listen only to current active editor changes
+            if (e.document === window.activeTextEditor?.document) {
+                PreviewPanel.update();
             }
         }),
-
         // Commands
-        commands.registerCommand('handlebarsPreview.preview', preview)
+        commands.registerCommand('handlebars.preview', () => {
+            PreviewPanel.createOrShow(context.extensionUri);
+        })
     );
+
+    PreviewPanel.activate(context);
 }
 
 export function deactivate() {

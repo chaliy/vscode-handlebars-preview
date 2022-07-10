@@ -4,7 +4,7 @@ Live preview for your Handlebars templates. Extension compiles Handlebars templa
 
 ## Features
 
-- Live prview for Handlebars templates. Preview updates as you type.
+- Live preview for Handlebars templates. Preview updates as you type.
 - Support for fake data. Add file `yourtemplate.handlebars.json` to be a context of the template
 
 ## Example
@@ -24,4 +24,4 @@ Live preview for your Handlebars templates. Extension compiles Handlebars templa
 
 ## License
 
-MIT
+MIT (Except russians)

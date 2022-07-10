@@ -1,6 +1,6 @@
-import Handlebars from "handlebars";
+import * as Handlebars from "handlebars";
 
-export default (templateSource, dataSource): string => {
+export default (templateSource: string, dataSource: any): string => {
     if (!templateSource) {
         return "<body>Select document to render</body>";
     }
@@ -17,4 +17,4 @@ export default (templateSource, dataSource): string => {
             </body>
         `;
     }
-}
+};

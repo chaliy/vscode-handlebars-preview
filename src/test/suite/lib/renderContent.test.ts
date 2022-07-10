@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import { join } from "path";
-import { TextDocument } from "vscode";
-import renderContent from "../../src/lib/renderContent";
+import renderContent from "../../../lib/renderContent";
 
 
 suite("lib/renderContent", () => {

@@ -2,3 +2,8 @@
 out
 node_modules
 .vscode-test
+*.vsix
+
+# VS Code
+.vscode/*.log
+.vscode/*.old
