@@ -13,7 +13,7 @@ Live preview for your Handlebars templates. Extension compiles Handlebars templa
 
 ## Usage
 
-- Use the keybinding 'ctrl+p h'
+- Use the keybinding 'ctrl+k h'
 - To run from command panel 'ctrl+shift+p' and type "Handlebars: Open Preview"
 
 ## Credits

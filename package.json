@@ -2,7 +2,7 @@
   "name": "handlebars-preview",
   "displayName": "Handlebars Preview",
   "description": "Live preview for Handlebar templates",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "publisher": "chaliy",
   "license": "MIT",
   "engines": {
@@ -38,7 +38,7 @@
     "keybindings": [
       {
         "command": "handlebars.preview",
-        "key": "ctrl+p h",
+        "key": "ctrl+k h",
         "when": "!terminalFocus"
       }
     ]
@@ -49,7 +49,9 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "publish": "vsce publish",
+    "package": "vsce package"
   },
   "devDependencies": {
     "@types/glob": "^7.2.0",
@@ -62,7 +64,8 @@
     "eslint": "^8.18.0",
     "glob": "^8.0.3",
     "mocha": "^10.0.0",
-    "typescript": "^4.7.4"
+    "typescript": "^4.7.4",
+    "vsce": "^2.10.0"
   },
   "dependencies": {
     "handlebars": "^4.7.7"

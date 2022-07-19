@@ -1,5 +1,8 @@
 # Change Log
 
+## [1.3.0] - 2022-07-19
+- Breaking change, default key bindings now ctrl+k h, addressing [#11](https://github.com/chaliy/vscode-handlebars-preview/issues/11)
+
 ## [1.2.0] - 2022-07-11
 - Preview extension reimplemented using Webview API
 
