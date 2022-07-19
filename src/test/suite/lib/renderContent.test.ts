@@ -1,5 +1,4 @@
 import * as assert from "assert";
-import { join } from "path";
 import renderContent from "../../../lib/renderContent";
 
 
@@ -10,7 +9,6 @@ suite("lib/renderContent", () => {
   });
 
   test("render with context", () => {
-    console.log(join(__dirname, "../examples/simple.handlebars"));
     const html = renderContent("Super {{foo}}!", "{ \"foo\": \"bar\" }");
     assert.equal(html, "Super bar!");
   });
