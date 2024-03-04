@@ -6,15 +6,16 @@ import renderContent from "./renderContent";
 
 
 function resolveFileOrText(fileName: string): string {
-    let document = vscode.workspace.textDocuments.find(e => e.fileName === fileName);
+	fileName = fileName?.startsWith("file://") ? fileName.slice(7) : fileName;
+	let document = vscode.workspace.textDocuments.find(e => e.fileName === fileName);
 
-    if (document) {
-        return document.getText();
-    }
-    if (dirname(fileName) && existsSync(fileName)) {
-        return readFileSync(fileName, "utf8");
-    }
-    return "";
+	if (document) {
+		return document.getText();
+	}
+	if (dirname(fileName) && existsSync(fileName)) {
+		return readFileSync(fileName, "utf8");
+	}
+	return "";
 }
 
 function getWebviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
@@ -32,7 +33,7 @@ export class PreviewPanel {
 	private readonly _panel: vscode.WebviewPanel;
 	private readonly _extensionUri: vscode.Uri;
 	private _fileName: string = "";
-    private _dataFileName: string = "";
+	private _dataFileName: string = "";
 	private _disposables: vscode.Disposable[] = [];
 
 	public static activate(context: vscode.ExtensionContext) {
@@ -139,32 +140,49 @@ export class PreviewPanel {
 		this._panel.webview.html = this.generateHtmlPreview();
 	}
 
+	private loadPartials() {
+		const config = vscode.workspace.getConfiguration();
+		const partialUris = config.get<string[]>("handlebars.partials") ?? [];
+
+		const partials: { [key: string]: string } = {};
+		partialUris.forEach((uri: string) => {
+			let partialName = uri?.split("/")?.pop()?.split(".")[0];
+			if (!partialName) {
+				return;
+			}
+			let partialContent = resolveFileOrText(uri);
+			partials[partialName] = partialContent;
+		});
+		return partials;
+	}
+
 	private generateHtmlPreview() {
 		if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document) {
-            const currentFileName = vscode.window.activeTextEditor.document.fileName;
-            
-            let dataFileName;
-            let fileName;
+			const currentFileName = vscode.window.activeTextEditor.document.fileName;
 
-            if (currentFileName === this._fileName
-                 || currentFileName === this._dataFileName) {
-                // User switched editor to context, just use stored on
-                fileName = this._fileName;
-                dataFileName = this._dataFileName;
-            } else {
-                dataFileName = currentFileName + '.json';
-                fileName = currentFileName;
-            }
+			let dataFileName;
+			let fileName;
 
-            this._fileName = fileName;
-            this._dataFileName = dataFileName;
-            const templateSource = resolveFileOrText(fileName);
-            const dataSource = resolveFileOrText(dataFileName);
+			if (currentFileName === this._fileName
+				|| currentFileName === this._dataFileName) {
+				// User switched editor to context, just use stored on
+				fileName = this._fileName;
+				dataFileName = this._dataFileName;
+			} else {
+				dataFileName = currentFileName + '.json';
+				fileName = currentFileName;
+			}
 
-            return renderContent(templateSource, dataSource);
-        }
-        
-        return `
+			this._fileName = fileName;
+			this._dataFileName = dataFileName;
+			const templateSource = resolveFileOrText(fileName);
+			const dataSource = resolveFileOrText(dataFileName);
+			const partials = this.loadPartials();
+
+			return renderContent(templateSource, dataSource, partials);
+		}
+
+		return `
             <body>
                 <p>No active text editor selected....</p>
             </body>

@@ -1,6 +1,7 @@
 import {
     workspace, window, commands,
-    ExtensionContext, TextEditorSelectionChangeEvent, TextDocumentChangeEvent
+    ExtensionContext, TextEditorSelectionChangeEvent, TextDocumentChangeEvent,
+    ConfigurationTarget
 } from "vscode";
 
 import { PreviewPanel } from './lib/PreviewPanel';
@@ -22,6 +23,17 @@ export function activate(context: ExtensionContext) {
         // Commands
         commands.registerCommand('handlebars.preview', () => {
             PreviewPanel.createOrShow(context.extensionUri);
+        }),
+        commands.registerCommand('handlebars.loadPartials', () => {
+            window.showOpenDialog({
+                canSelectMany: true,
+                canSelectFiles: true,
+                canSelectFolders: false,
+            }).then((uris: any) => {
+                const config = workspace.getConfiguration("handlebars");
+                const uriStrings = uris.map((uri: any) => uri.toString());
+                config.update("partials", uriStrings, ConfigurationTarget.Workspace);
+            });
         })
     );
 

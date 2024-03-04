@@ -2,8 +2,8 @@
   "name": "handlebars-preview",
   "displayName": "Handlebars Preview",
   "description": "Live preview for Handlebar templates",
-  "version": "1.3.1",
-  "publisher": "chaliy",
+  "version": "1.3.2",
+  "publisher": "erickisos",
   "license": "MIT",
   "engines": {
     "vscode": "^1.69.0"
@@ -11,7 +11,7 @@
   "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chaliy/vscode-handlebars-preview"
+    "url": "https://github.com/erickisos/vscode-handlebars-preview"
   },
   "galleryBanner": {
     "color": "#0F6378",
@@ -25,7 +25,8 @@
     "Live Preview"
   ],
   "activationEvents": [
-    "onCommand:handlebars.preview"
+    "onCommand:handlebars.preview",
+    "onCommand:handlebars.loadPartials"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -33,6 +34,10 @@
       {
         "command": "handlebars.preview",
         "title": "Handlebars: Open Preview"
+      },
+      {
+        "command": "handlebars.loadPartials",
+        "title": "Handlebars: Load Partials"
       }
     ],
     "keybindings": [
@@ -42,22 +47,36 @@
         "when": "!terminalFocus"
       }
     ],
+    "configuration": {
+      "type": "object",
+      "title": "Handlebars Preview",
+      "properties": {
+        "handlebars.partials": {
+          "type": "array",
+          "description": "List of partial files to load",
+          "items": {
+            "type": "string",
+            "default": []
+          }
+        }
+      }
+    },
     "menus": {
-			"explorer/context": [
-				{
-					"command": "handlebars.preview",
-					"when": "resourceLangId == handlebars",
-					"group": "Handlebars"
-				}
-			],
-			"editor/title/context": [
-				{
-					"command": "handlebars.preview",
-					"when": "resourceLangId == handlebars",
-					"group": "Handlebars"
-				}
-			]
-		}
+      "explorer/context": [
+        {
+          "command": "handlebars.preview",
+          "when": "resourceLangId == handlebars",
+          "group": "Handlebars"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "handlebars.preview",
+          "when": "resourceLangId == handlebars",
+          "group": "Handlebars"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
