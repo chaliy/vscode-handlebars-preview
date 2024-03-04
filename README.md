@@ -9,7 +9,7 @@ Live preview for your Handlebars templates. Extension compiles Handlebars templa
 
 ## Example
 
-<img src="https://raw.githubusercontent.com/chaliy/vscode-handlebars-preview/master/docs/usage.gif" alt="demo" style="width:480px;"/>
+![preview handlebar file demo](docs/usage.gif)
 
 ## Usage
 

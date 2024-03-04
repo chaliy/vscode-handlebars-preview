@@ -1,11 +1,17 @@
 import * as Handlebars from "handlebars";
 
-export default (templateSource: string, dataSource: any): string => {
+export default (templateSource: string, dataSource: any, partials?: {[key: string]: string}): string => {
     if (!templateSource) {
         return "<body>Select document to render</body>";
     }
 
-    try {   
+    if (partials) {
+        Object.entries(partials).forEach(([name, content]) => {
+            Handlebars.registerPartial(name, content);
+        });
+    }
+
+    try {
         let data = JSON.parse(dataSource || "{}");
         let template = Handlebars.compile(templateSource);
         return template(data);
