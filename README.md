@@ -8,6 +8,7 @@ Requires Visual Studio Code 1.125.0 or newer.
 
 - Live preview for Handlebars templates. Preview updates as you type.
 - Support for fake data. Add file `yourtemplate.handlebars.json` to be a context of the template
+- Support for partials selected from the command palette.
 - Preview webviews run with scripts disabled and a restrictive content security policy.
 
 ## Example
@@ -18,6 +19,7 @@ Requires Visual Studio Code 1.125.0 or newer.
 
 - Use the keybinding `ctrl+k h`.
 - To run from the command palette, use `ctrl+shift+p` and type `Handlebars: Open Preview`.
+- To register partials for preview rendering, run `Handlebars: Load Partials` and select one or more partial files. Each partial is available by its file basename.
 
 ## Credits
 
