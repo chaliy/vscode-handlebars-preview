@@ -1,11 +1,12 @@
-import { dirname } from "path";
+import { dirname, parse } from "path";
 import { existsSync, readFileSync } from "fs";
 import * as vscode from 'vscode';
 
-import renderContent from "./renderContent";
+import renderContent, { Partials } from "./renderContent";
 
 
 function resolveFileOrText(fileName: string): string {
+    fileName = fileName?.startsWith("file://") ? vscode.Uri.parse(fileName).fsPath : fileName;
     let document = vscode.workspace.textDocuments.find(e => e.fileName === fileName);
 
     if (document) {
@@ -140,6 +141,22 @@ export class PreviewPanel {
 		this._panel.webview.html = renderWebviewDocument(this._panel.webview, this.generateHtmlPreview());
 	}
 
+	private loadPartials(): Partials {
+		const config = vscode.workspace.getConfiguration("handlebars");
+		const partialUris = config.get<string[]>("partials") ?? [];
+
+		const partials: Partials = {};
+		partialUris.forEach((uri: string) => {
+			const fileName = uri?.startsWith("file://") ? vscode.Uri.parse(uri).fsPath : uri;
+			const partialName = parse(fileName).name;
+			if (!partialName) {
+				return;
+			}
+			partials[partialName] = resolveFileOrText(fileName);
+		});
+		return partials;
+	}
+
 	private generateHtmlPreview() {
 		if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document) {
             const currentFileName = vscode.window.activeTextEditor.document.fileName;
@@ -161,8 +178,9 @@ export class PreviewPanel {
             this._dataFileName = dataFileName;
             const templateSource = resolveFileOrText(fileName);
             const dataSource = resolveFileOrText(dataFileName);
+			const partials = this.loadPartials();
 
-            return renderContent(templateSource, dataSource);
+            return renderContent(templateSource, dataSource, partials);
         }
         
         return `

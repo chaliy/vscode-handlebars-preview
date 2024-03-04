@@ -25,7 +25,8 @@
     "Live Preview"
   ],
   "activationEvents": [
-    "onCommand:handlebars.preview"
+    "onCommand:handlebars.preview",
+    "onCommand:handlebars.loadPartials"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -33,6 +34,10 @@
       {
         "command": "handlebars.preview",
         "title": "Handlebars: Open Preview"
+      },
+      {
+        "command": "handlebars.loadPartials",
+        "title": "Handlebars: Load Partials"
       }
     ],
     "keybindings": [
@@ -42,6 +47,20 @@
         "when": "!terminalFocus"
       }
     ],
+    "configuration": {
+      "type": "object",
+      "title": "Handlebars Preview",
+      "properties": {
+        "handlebars.partials": {
+          "type": "array",
+          "description": "List of partial files to load by basename for preview rendering.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "menus": {
       "explorer/context": [
         {

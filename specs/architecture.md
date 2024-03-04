@@ -24,6 +24,8 @@ work stays small, testable, and aligned with VS Code extension behavior.
 - Webview output should be generated from compiled Handlebars and the matching
   JSON context; missing or invalid context should fail predictably and be
   covered by tests.
+- Configured partial files are loaded by the preview panel and passed into the
+  renderer by basename without requiring VS Code APIs in renderer tests.
 - Preview webviews must keep scripts disabled unless a feature explicitly needs
   them and ships with matching tests and documentation.
 - Preview webviews must include a restrictive content security policy.

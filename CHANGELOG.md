@@ -8,6 +8,7 @@
 - Replace the legacy `glob` test dependency with a local test-file loader.
 - Add regression coverage for missing/invalid JSON context, escaped render errors, and preview command wiring.
 - Add GitHub Actions CI for compile, lint, test, audit, and package validation.
+- Add `Handlebars: Load Partials` for workspace-configured partial files.
 
 ## [1.3.1] - 2022-07-19
 - Extension now contributes to Explorer context menu
