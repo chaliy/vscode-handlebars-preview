@@ -43,27 +43,27 @@
       }
     ],
     "menus": {
-			"explorer/context": [
-				{
-					"command": "handlebars.preview",
-					"when": "resourceLangId == handlebars",
-					"group": "Handlebars"
-				}
-			],
-			"editor/title/context": [
-				{
-					"command": "handlebars.preview",
-					"when": "resourceLangId == handlebars",
-					"group": "Handlebars"
-				}
-			]
-		}
+      "explorer/context": [
+        {
+          "command": "handlebars.preview",
+          "when": "resourceLangId == handlebars",
+          "group": "Handlebars"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "handlebars.preview",
+          "when": "resourceLangId == handlebars",
+          "group": "Handlebars"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "webpack --mode production --devtool hidden-source-map",
     "watch": "webpack --mode development --watch --info-verbosity",
-    "pretest": "npm run compile && npm run lint",
+    "pretest": "tsc -p ./ && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
     "publish": "vsce publish",
@@ -77,16 +77,20 @@
     "@typescript-eslint/eslint-plugin": "^5.30.0",
     "@typescript-eslint/parser": "^5.30.0",
     "@vscode/test-electron": "^2.1.5",
+    "@vscode/vsce": "^3.9.2",
     "eslint": "^8.18.0",
     "glob": "^8.0.3",
-    "mocha": "^10.0.0",
+    "mocha": "^11.7.6",
     "ts-loader": "^9.3.1",
     "typescript": "^4.7.4",
-    "vsce": "^2.10.0",
     "webpack": "^5.73.0",
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
     "handlebars": "^4.7.7"
+  },
+  "overrides": {
+    "diff": "^9.0.0",
+    "serialize-javascript": "^7.0.7"
   }
 }
