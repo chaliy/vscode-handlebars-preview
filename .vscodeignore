@@ -11,3 +11,7 @@ yarn.lock
 Makefile
 *.vsix
 node_modules
+AGENTS.md
+CLAUDE.md
+.agents/**
+specs/**
