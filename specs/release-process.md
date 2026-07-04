@@ -17,6 +17,8 @@ Define the release expectations for publishing the VS Code extension.
 - Package validation should run with `npm run package` before publishing.
 - Publish with `npm run publish` only after checks pass and the package contents
   have been reviewed.
+- After publishing, wait until Marketplace metadata and a fresh extension
+  install both report the new version before considering the release complete.
 
 ## Versioning
 
@@ -29,3 +31,8 @@ Define the release expectations for publishing the VS Code extension.
 
 A release is ready when the package installs, the preview command opens, sample
 templates render correctly, and docs describe the shipped behavior.
+
+After publishing, smoke test the Marketplace-installed extension in an isolated
+VS Code profile. Confirm the installed version matches `package.json`, the
+preview command activates the extension, and a sample template opens a preview
+panel.
