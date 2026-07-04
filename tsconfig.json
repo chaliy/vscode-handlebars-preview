@@ -1,13 +1,19 @@
 {
 	"compilerOptions": {
-		"module": "commonjs",
+		"module": "Node16",
 		"target": "es2020",
 		"outDir": "out",
 		"lib": [
-			"es2020"
+			"es2022"
+		],
+		"types": [
+			"node",
+			"mocha",
+			"vscode"
 		],
 		"sourceMap": true,
 		"rootDir": "src",
+		"moduleResolution": "node16",
 		"strict": true   /* enable all strict type-checking options */
 		/* Additional Checks */
 		// "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */

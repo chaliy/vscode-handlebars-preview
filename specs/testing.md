@@ -18,6 +18,8 @@ Define the minimum confidence expected before changes are shipped.
 - VS Code command or panel lifecycle changes need integration tests when the
   behavior can be exercised by the extension test harness.
 - Bug fixes should include regression tests when practical.
+- CI must run compile, lint, test, audit, and package validation for pull
+  requests and pushes.
 
 ## Smoke Testing
 

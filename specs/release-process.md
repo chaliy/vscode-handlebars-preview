@@ -26,6 +26,8 @@ Define the release expectations for publishing the VS Code extension.
 - Minor releases are for user-visible features or behavior improvements.
 - Major releases are for breaking behavior or VS Code engine changes that may
   require user action.
+- When the minimum VS Code engine changes, the release notes must call it out as
+  a breaking change.
 
 ## Release Readiness
 
