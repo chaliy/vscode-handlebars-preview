@@ -1,5 +1,5 @@
-import * as assert from "assert";
 import renderContent from "../../../lib/renderContent";
+import * as assert from "../assertions";
 
 
 suite("lib/renderContent", () => {

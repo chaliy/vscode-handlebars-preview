@@ -12,18 +12,24 @@ work stays small, testable, and aligned with VS Code extension behavior.
 ## Requirements
 
 - Extension activation remains command-driven through `handlebars.preview`.
+- The extension remains web-compatible and exposes a `browser` entry in
+  `package.json`.
 - Command wiring and VS Code API integration belong near `src/extension.ts`.
 - Preview panel state, lifecycle, editor subscriptions, and webview updates
   belong in `src/lib/PreviewPanel.ts`.
 - Template rendering and data loading belong in focused library code under
   `src/lib/`.
+- Runtime code must use `vscode.Uri` and `vscode.workspace.fs` for workspace
+  file access instead of Node `fs` or `path` APIs.
 - Rendering code must be usable from tests without requiring a running VS Code
   window when practical.
-- The preview data file convention remains `template.handlebars.json` unless a
-  behavior change updates docs, tests, and this spec together.
+- The default preview data file convention remains `template.handlebars.json`;
+  the appended suffix is configurable with `handlebarsPreview.dataFileSuffix`.
 - Webview output should be generated from compiled Handlebars and the matching
   JSON context; missing or invalid context should fail predictably and be
   covered by tests.
+- Preview updates should refresh when the active template, its open text
+  document, or its adjacent data file changes.
 - Configured partial files are loaded by the preview panel and passed into the
   renderer by basename without requiring VS Code APIs in renderer tests.
 - Preview webviews must keep scripts disabled unless a feature explicitly needs
@@ -37,3 +43,5 @@ work stays small, testable, and aligned with VS Code extension behavior.
 - Keep VS Code-specific objects at the boundary so rendering remains easy to
   test.
 - Avoid speculative extension points until a real feature needs them.
+- Prefer VS Code-native extension APIs over Node-specific runtime APIs so the
+  preview works in desktop, remote, virtual, and web workspaces.

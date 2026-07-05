@@ -1,8 +1,7 @@
-import * as assert from 'assert';
-import * as path from 'path';
 import * as vscode from 'vscode';
 
 import * as extension from "../../extension";
+import * as assert from "./assertions";
 
 suite('extension', () => {
 	test('activation', () => {
@@ -10,8 +9,11 @@ suite('extension', () => {
 	});
 
 	test('opens preview command for handlebars document', async () => {
+		const extensionUri = vscode.extensions.getExtension('chaliy.handlebars-preview')?.extensionUri;
+		assert.ok(extensionUri);
+
 		const document = await vscode.workspace.openTextDocument(
-			path.resolve(__dirname, '../../../src/test/examples/simple.handlebars')
+			vscode.Uri.joinPath(extensionUri, 'src/test/examples/simple.handlebars')
 		);
 
 		await vscode.window.showTextDocument(document);
@@ -22,5 +24,21 @@ suite('extension', () => {
 			.filter(tab => tab.input instanceof vscode.TabInputWebview);
 
 		assert.ok(webviewTabs.some(tab => tab.label === 'Handlebars HTML Preview'));
+	});
+
+	test('renders handlebars document with adjacent JSON data in preview', async () => {
+		const extensionUri = vscode.extensions.getExtension('chaliy.handlebars-preview')?.extensionUri;
+		assert.ok(extensionUri);
+
+		const document = await vscode.workspace.openTextDocument(
+			vscode.Uri.joinPath(extensionUri, 'src/test/examples/simple.handlebars')
+		);
+
+		await vscode.window.showTextDocument(document);
+		const html = await vscode.commands.executeCommand<string>('handlebars.preview');
+
+		assert.ok(html);
+		assert.doesNotMatch(html, /Super \{\{foo\}\}!/);
+		assert.match(html, /Super bar!/);
 	});
 });
