@@ -30,6 +30,8 @@ work stays small, testable, and aligned with VS Code extension behavior.
   covered by tests.
 - Preview updates should refresh when the active template, its open text
   document, or its adjacent data file changes.
+- Configured partial files are loaded by the preview panel and passed into the
+  renderer by basename without requiring VS Code APIs in renderer tests.
 - Preview webviews must keep scripts disabled unless a feature explicitly needs
   them and ships with matching tests and documentation.
 - Preview webviews must include a restrictive content security policy.

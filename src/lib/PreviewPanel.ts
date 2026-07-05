@@ -1,11 +1,20 @@
 import * as vscode from 'vscode';
 
-import renderContent from "./renderContent";
+import renderContent, { Partials } from "./renderContent";
 
 const textDecoder = new globalThis.TextDecoder('utf-8');
 
 function uriEquals(left: vscode.Uri | undefined, right: vscode.Uri | undefined): boolean {
 	return left?.toString() === right?.toString();
+}
+
+function uriFromConfigurationValue(value: string): vscode.Uri {
+	return /^[a-z][a-z0-9+.-]*:/i.test(value) ? vscode.Uri.parse(value) : vscode.Uri.file(value);
+}
+
+function basenameWithoutExtension(uri: vscode.Uri): string {
+	const basename = uri.path.split('/').pop() ?? '';
+	return basename.replace(/\.[^/.]+$/, '');
 }
 
 export function getDataUriForTemplate(templateUri: vscode.Uri, dataFileSuffix: string): vscode.Uri {
@@ -187,6 +196,23 @@ export class PreviewPanel {
 		return html;
 	}
 
+	private async loadPartials(): Promise<Partials> {
+		const config = vscode.workspace.getConfiguration("handlebars");
+		const partialValues = config.get<string[]>("partials") ?? [];
+		const partials: Partials = {};
+
+		await Promise.all(partialValues.map(async value => {
+			const uri = uriFromConfigurationValue(value);
+			const partialName = basenameWithoutExtension(uri);
+
+			if (partialName) {
+				partials[partialName] = await resolveUriOrText(uri);
+			}
+		}));
+
+		return partials;
+	}
+
 	private async generateHtmlPreview(useActiveEditor: boolean): Promise<string> {
 		const activeDocument = vscode.window.activeTextEditor?.document;
 
@@ -199,8 +225,9 @@ export class PreviewPanel {
 		if (this._templateUri && this._dataUri) {
 			const templateSource = await resolveUriOrText(this._templateUri);
 			const dataSource = await resolveUriOrText(this._dataUri);
+			const partials = await this.loadPartials();
 
-			return renderContent(templateSource, dataSource);
+			return renderContent(templateSource, dataSource, partials);
 		}
 
 		return `

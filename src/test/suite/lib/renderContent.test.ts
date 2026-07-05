@@ -18,6 +18,25 @@ suite("lib/renderContent", () => {
     assert.equal(html, "Super !");
   });
 
+  test("render with partials", () => {
+    const html = renderContent("Hello {{> user}}!", "{ \"name\": \"Ada\" }", {
+      user: "<b>{{name}}</b>",
+    });
+
+    assert.equal(html, "Hello <b>Ada</b>!");
+  });
+
+  test("does not leak partials between renders", () => {
+    renderContent("Hello {{> user}}!", "{ \"name\": \"Ada\" }", {
+      user: "<b>{{name}}</b>",
+    });
+
+    const html = renderContent("Hello {{> user}}!", "{ \"name\": \"Grace\" }");
+
+    assert.match(html, /Error occurred/);
+    assert.match(html, /partial user could not be found/);
+  });
+
   test("render invalid context as escaped error", () => {
     const html = renderContent("Super {{foo}}!", "{");
 

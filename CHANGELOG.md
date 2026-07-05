@@ -14,6 +14,7 @@
 - Remove the legacy custom `@vscode/test-electron` runner entrypoint.
 - Add regression coverage for missing/invalid JSON context, escaped render errors, preview command wiring, and rendered preview output.
 - Add GitHub Actions CI for compile, lint, desktop tests, web tests, audit, and package validation.
+- Add `Handlebars: Load Partials` for workspace-configured partial files.
 
 ## [1.3.1] - 2022-07-19
 - Extension now contributes to Explorer context menu

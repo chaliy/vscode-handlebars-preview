@@ -11,6 +11,7 @@ Runs in VS Code desktop, remote workspaces, and VS Code for the Web.
 - Support for fake data. Add file `yourtemplate.handlebars.json` to be a context of the template.
 - Configurable preview data suffix through `handlebarsPreview.dataFileSuffix`.
 - Contributes `.handlebars` and `.hbs` language recognition.
+- Support for partials selected from the command palette.
 - Preview webviews run with scripts disabled and a restrictive content security policy.
 
 ## Example
@@ -22,6 +23,7 @@ Runs in VS Code desktop, remote workspaces, and VS Code for the Web.
 - Use the keybinding `ctrl+k h`.
 - To run from the command palette, use `ctrl+shift+p` and type `Handlebars: Open Preview`.
 - By default, preview data is read from the template file name plus `.json`, such as `email.handlebars.json`.
+- To register partials for preview rendering, run `Handlebars: Load Partials` and select one or more partial files. Each partial is available by its file basename.
 
 ## Credits
 

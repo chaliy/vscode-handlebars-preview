@@ -1,5 +1,7 @@
 import * as Handlebars from "handlebars";
 
+export type Partials = Record<string, string>;
+
 function escapeHtml(value: unknown): string {
     return String(value)
         .replace(/&/g, "&amp;")
@@ -9,14 +11,20 @@ function escapeHtml(value: unknown): string {
         .replace(/'/g, "&#39;");
 }
 
-export default (templateSource: string, dataSource?: string | null): string => {
+export default (templateSource: string, dataSource?: string | null, partials: Partials = {}): string => {
     if (!templateSource) {
         return "<p>Select document to render</p>";
     }
 
     try {
         const data = JSON.parse(dataSource || "{}");
-        const template = Handlebars.compile(templateSource);
+        const handlebars = Handlebars.create();
+
+        Object.entries(partials).forEach(([name, content]) => {
+            handlebars.registerPartial(name, content);
+        });
+
+        const template = handlebars.compile(templateSource);
         return template(data);
     } catch (ex) {
         return `

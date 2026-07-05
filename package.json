@@ -26,6 +26,7 @@
   ],
   "activationEvents": [
     "onCommand:handlebars.preview",
+    "onCommand:handlebars.loadPartials",
     "onWebviewPanel:handlebars"
   ],
   "main": "./out/extension.js",
@@ -54,6 +55,10 @@
       {
         "command": "handlebars.preview",
         "title": "Handlebars: Open Preview"
+      },
+      {
+        "command": "handlebars.loadPartials",
+        "title": "Handlebars: Load Partials"
       }
     ],
     "keybindings": [
@@ -80,8 +85,17 @@
       ]
     },
     "configuration": {
+      "type": "object",
       "title": "Handlebars Preview",
       "properties": {
+        "handlebars.partials": {
+          "type": "array",
+          "description": "List of partial file URIs to load by basename for preview rendering.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
         "handlebarsPreview.dataFileSuffix": {
           "type": "string",
           "default": ".json",

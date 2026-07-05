@@ -1,6 +1,6 @@
 import {
     workspace, window, commands,
-    ExtensionContext, TextDocumentChangeEvent
+    ExtensionContext, TextDocumentChangeEvent, ConfigurationTarget, Uri
 } from "vscode";
 
 import { PreviewPanel } from './lib/PreviewPanel';
@@ -17,14 +17,31 @@ export function activate(context: ExtensionContext) {
             PreviewPanel.updateFromActiveEditor();
         }),
         workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('handlebarsPreview.dataFileSuffix')) {
+            if (e.affectsConfiguration('handlebarsPreview.dataFileSuffix')
+                || e.affectsConfiguration('handlebars.partials')) {
                 PreviewPanel.updateConfiguration();
             }
         }),
         workspace.onDidChangeTextDocument((e: TextDocumentChangeEvent) => {
             PreviewPanel.refreshForUri(e.document.uri);
         }),
-        commands.registerCommand('handlebars.preview', () => PreviewPanel.createOrShow(context.extensionUri))
+        commands.registerCommand('handlebars.preview', () => PreviewPanel.createOrShow(context.extensionUri)),
+        commands.registerCommand('handlebars.loadPartials', async () => {
+            const uris = await window.showOpenDialog({
+                canSelectMany: true,
+                canSelectFiles: true,
+                canSelectFolders: false,
+            });
+
+            if (!uris) {
+                return;
+            }
+
+            const config = workspace.getConfiguration("handlebars");
+            const uriStrings = uris.map((uri: Uri) => uri.toString());
+            await config.update("partials", uriStrings, ConfigurationTarget.Workspace);
+            PreviewPanel.update();
+        })
     );
 
     PreviewPanel.activate(context);
