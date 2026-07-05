@@ -1,20 +1,38 @@
-import { dirname } from "path";
-import { existsSync, readFileSync } from "fs";
 import * as vscode from 'vscode';
 
 import renderContent from "./renderContent";
 
+const textDecoder = new globalThis.TextDecoder('utf-8');
 
-function resolveFileOrText(fileName: string): string {
-    let document = vscode.workspace.textDocuments.find(e => e.fileName === fileName);
+function uriEquals(left: vscode.Uri | undefined, right: vscode.Uri | undefined): boolean {
+	return left?.toString() === right?.toString();
+}
 
-    if (document) {
-        return document.getText();
-    }
-    if (dirname(fileName) && existsSync(fileName)) {
-        return readFileSync(fileName, "utf8");
-    }
-    return "";
+export function getDataUriForTemplate(templateUri: vscode.Uri, dataFileSuffix: string): vscode.Uri {
+	return templateUri.with({ path: `${templateUri.path}${dataFileSuffix}` });
+}
+
+function getDataFileSuffix(): string {
+	const configured = vscode.workspace
+		.getConfiguration('handlebarsPreview')
+		.get<string>('dataFileSuffix');
+
+	return configured?.trim() || '.json';
+}
+
+async function resolveUriOrText(uri: vscode.Uri): Promise<string> {
+	const document = vscode.workspace.textDocuments.find(e => uriEquals(e.uri, uri));
+
+	if (document) {
+		return document.getText();
+	}
+
+	try {
+		const content = await vscode.workspace.fs.readFile(uri);
+		return textDecoder.decode(content);
+	} catch {
+		return "";
+	}
 }
 
 function getWebviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
@@ -51,9 +69,10 @@ export class PreviewPanel {
 	public static readonly viewType = 'handlebars';
 
 	private readonly _panel: vscode.WebviewPanel;
-	private _fileName: string = "";
-    private _dataFileName: string = "";
+	private _templateUri: vscode.Uri | undefined;
+	private _dataUri: vscode.Uri | undefined;
 	private _disposables: vscode.Disposable[] = [];
+	private _updateSequence = 0;
 
 	public static activate(context: vscode.ExtensionContext) {
 		if (vscode.window.registerWebviewPanelSerializer) {
@@ -71,11 +90,11 @@ export class PreviewPanel {
 		}
 	}
 
-	public static createOrShow(extensionUri: vscode.Uri) {
+	public static async createOrShow(extensionUri: vscode.Uri): Promise<string | undefined> {
 		// If we already have a panel, show it.
 		if (PreviewPanel.currentPanel) {
 			PreviewPanel.currentPanel._panel.reveal(vscode.ViewColumn.Two);
-			return;
+			return PreviewPanel.currentPanel.update({ useActiveEditor: true });
 		}
 
 		// Otherwise, create a new panel.
@@ -87,6 +106,7 @@ export class PreviewPanel {
 		);
 
 		PreviewPanel.currentPanel = new PreviewPanel(panel);
+		return PreviewPanel.currentPanel.update({ useActiveEditor: true });
 	}
 
 	public static revive(panel: vscode.WebviewPanel) {
@@ -95,7 +115,26 @@ export class PreviewPanel {
 
 	public static update() {
 		if (PreviewPanel.currentPanel) {
-			PreviewPanel.currentPanel.update();
+			void PreviewPanel.currentPanel.update({ useActiveEditor: false });
+		}
+	}
+
+	public static updateFromActiveEditor() {
+		if (PreviewPanel.currentPanel) {
+			void PreviewPanel.currentPanel.update({ useActiveEditor: true });
+		}
+	}
+
+	public static refreshForUri(uri: vscode.Uri) {
+		if (PreviewPanel.currentPanel?.tracksUri(uri)) {
+			void PreviewPanel.currentPanel.update({ useActiveEditor: false });
+		}
+	}
+
+	public static updateConfiguration() {
+		if (PreviewPanel.currentPanel) {
+			PreviewPanel.currentPanel.refreshDataUri();
+			void PreviewPanel.currentPanel.update({ useActiveEditor: false });
 		}
 	}
 
@@ -103,7 +142,7 @@ export class PreviewPanel {
 		this._panel = panel;
 
 		// Set the webview's initial html content
-		this.update();
+		void this.update({ useActiveEditor: true });
 
 		// Listen for when the panel is disposed
 		// This happens when the user closes the panel or when the panel is closed programmatically
@@ -113,7 +152,7 @@ export class PreviewPanel {
 		this._panel.onDidChangeViewState(
 			() => {
 				if (this._panel.visible) {
-					this.update();
+					void this.update({ useActiveEditor: false });
 				}
 			},
 			null,
@@ -136,37 +175,51 @@ export class PreviewPanel {
 		}
 	}
 
-	private update() {
-		this._panel.webview.html = renderWebviewDocument(this._panel.webview, this.generateHtmlPreview());
+	private async update(options: { useActiveEditor: boolean }): Promise<string> {
+		const updateSequence = ++this._updateSequence;
+		const body = await this.generateHtmlPreview(options.useActiveEditor);
+		const html = renderWebviewDocument(this._panel.webview, body);
+
+		if (updateSequence === this._updateSequence) {
+			this._panel.webview.html = html;
+		}
+
+		return html;
 	}
 
-	private generateHtmlPreview() {
-		if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document) {
-            const currentFileName = vscode.window.activeTextEditor.document.fileName;
-            
-            let dataFileName;
-            let fileName;
+	private async generateHtmlPreview(useActiveEditor: boolean): Promise<string> {
+		const activeDocument = vscode.window.activeTextEditor?.document;
 
-            if (currentFileName === this._fileName
-                 || currentFileName === this._dataFileName) {
-                // User switched editor to context, just use stored on
-                fileName = this._fileName;
-                dataFileName = this._dataFileName;
-            } else {
-                dataFileName = currentFileName + '.json';
-                fileName = currentFileName;
-            }
+		if (useActiveEditor && activeDocument && !this.tracksUri(activeDocument.uri)) {
+			this.setPreviewSource(activeDocument.uri);
+		} else if (!this._templateUri && activeDocument) {
+			this.setPreviewSource(activeDocument.uri);
+		}
 
-            this._fileName = fileName;
-            this._dataFileName = dataFileName;
-            const templateSource = resolveFileOrText(fileName);
-            const dataSource = resolveFileOrText(dataFileName);
+		if (this._templateUri && this._dataUri) {
+			const templateSource = await resolveUriOrText(this._templateUri);
+			const dataSource = await resolveUriOrText(this._dataUri);
 
-            return renderContent(templateSource, dataSource);
-        }
-        
-        return `
+			return renderContent(templateSource, dataSource);
+		}
+
+		return `
             <p>No active text editor selected....</p>
         `;
+	}
+
+	private setPreviewSource(templateUri: vscode.Uri) {
+		this._templateUri = templateUri;
+		this._dataUri = getDataUriForTemplate(templateUri, getDataFileSuffix());
+	}
+
+	private refreshDataUri() {
+		if (this._templateUri) {
+			this._dataUri = getDataUriForTemplate(this._templateUri, getDataFileSuffix());
+		}
+	}
+
+	private tracksUri(uri: vscode.Uri): boolean {
+		return uriEquals(this._templateUri, uri) || uriEquals(this._dataUri, uri);
 	}
 }

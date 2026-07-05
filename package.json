@@ -25,10 +25,31 @@
     "Live Preview"
   ],
   "activationEvents": [
-    "onCommand:handlebars.preview"
+    "onCommand:handlebars.preview",
+    "onWebviewPanel:handlebars"
   ],
   "main": "./out/extension.js",
+  "browser": "./out/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
   "contributes": {
+    "languages": [
+      {
+        "id": "handlebars",
+        "aliases": [
+          "Handlebars",
+          "handlebars"
+        ],
+        "extensions": [
+          ".handlebars",
+          ".hbs"
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "handlebars.preview",
@@ -57,15 +78,29 @@
           "group": "Handlebars"
         }
       ]
+    },
+    "configuration": {
+      "title": "Handlebars Preview",
+      "properties": {
+        "handlebarsPreview.dataFileSuffix": {
+          "type": "string",
+          "default": ".json",
+          "description": "Suffix appended to the template file name to find preview data."
+        }
+      }
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "webpack --mode production --devtool hidden-source-map",
-    "watch": "webpack --mode development --watch",
-    "pretest": "tsc -p ./ && npm run compile && npm run lint",
+    "vscode:prepublish": "npm run package:bundle",
+    "check-types": "tsc --noEmit",
+    "compile": "npm run check-types && tsc -p ./ && node esbuild.js",
+    "compile:web-test": "node esbuild.js --web-tests",
+    "package:bundle": "npm run check-types && tsc -p ./ && node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "node ./out/test/runTest.js",
+    "test": "vscode-test",
+    "test:web": "npm run compile && npm run compile:web-test && vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/extensionTests.js .",
     "publish": "vsce publish",
     "package": "vsce package"
   },
@@ -76,14 +111,14 @@
     "@types/vscode": "^1.125.0",
     "@typescript-eslint/eslint-plugin": "^8.62.1",
     "@typescript-eslint/parser": "^8.62.1",
+    "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^3.0.0",
+    "@vscode/test-web": "^0.0.81",
     "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.25.11",
     "eslint": "^10.6.0",
     "mocha": "^11.7.6",
-    "ts-loader": "^9.6.2",
-    "typescript": "^6.0.3",
-    "webpack": "^5.108.4",
-    "webpack-cli": "^7.2.1"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "handlebars": "^4.7.7"

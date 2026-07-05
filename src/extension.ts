@@ -1,28 +1,30 @@
 import {
     workspace, window, commands,
-    ExtensionContext, TextEditorSelectionChangeEvent, TextDocumentChangeEvent
+    ExtensionContext, TextDocumentChangeEvent
 } from "vscode";
 
 import { PreviewPanel } from './lib/PreviewPanel';
 
 export function activate(context: ExtensionContext) {
+    const watcher = workspace.createFileSystemWatcher('**/*');
+
     context.subscriptions.push(
-        // Global handlers
-        window.onDidChangeTextEditorSelection((e: TextEditorSelectionChangeEvent) => {
-            if (e.textEditor === window.activeTextEditor) {
-                PreviewPanel.update();
+        watcher,
+        watcher.onDidChange(uri => PreviewPanel.refreshForUri(uri)),
+        watcher.onDidCreate(uri => PreviewPanel.refreshForUri(uri)),
+        watcher.onDidDelete(uri => PreviewPanel.refreshForUri(uri)),
+        window.onDidChangeActiveTextEditor(() => {
+            PreviewPanel.updateFromActiveEditor();
+        }),
+        workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('handlebarsPreview.dataFileSuffix')) {
+                PreviewPanel.updateConfiguration();
             }
         }),
         workspace.onDidChangeTextDocument((e: TextDocumentChangeEvent) => {
-            // Listen only to current active editor changes
-            if (e.document === window.activeTextEditor?.document) {
-                PreviewPanel.update();
-            }
+            PreviewPanel.refreshForUri(e.document.uri);
         }),
-        // Commands
-        commands.registerCommand('handlebars.preview', () => {
-            PreviewPanel.createOrShow(context.extensionUri);
-        })
+        commands.registerCommand('handlebars.preview', () => PreviewPanel.createOrShow(context.extensionUri))
     );
 
     PreviewPanel.activate(context);

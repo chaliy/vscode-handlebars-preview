@@ -3,11 +3,14 @@
 Live preview for your Handlebars templates. Extension compiles Handlebars template on the fly, apply preview data and render resulting HTML in separate window.
 
 Requires Visual Studio Code 1.125.0 or newer.
+Runs in VS Code desktop, remote workspaces, and VS Code for the Web.
 
 ## Features
 
 - Live preview for Handlebars templates. Preview updates as you type.
-- Support for fake data. Add file `yourtemplate.handlebars.json` to be a context of the template
+- Support for fake data. Add file `yourtemplate.handlebars.json` to be a context of the template.
+- Configurable preview data suffix through `handlebarsPreview.dataFileSuffix`.
+- Contributes `.handlebars` and `.hbs` language recognition.
 - Preview webviews run with scripts disabled and a restrictive content security policy.
 
 ## Example
@@ -18,6 +21,7 @@ Requires Visual Studio Code 1.125.0 or newer.
 
 - Use the keybinding `ctrl+k h`.
 - To run from the command palette, use `ctrl+shift+p` and type `Handlebars: Open Preview`.
+- By default, preview data is read from the template file name plus `.json`, such as `email.handlebars.json`.
 
 ## Credits
 

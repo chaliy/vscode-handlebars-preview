@@ -26,6 +26,8 @@ rot, stale docs, and untested behavior from accumulating.
   large migrations may be split into tracked follow-up work.
 - Legacy scaffold dependencies should be removed when local code can replace
   them without increasing maintenance cost.
+- Build tooling should stay simple; prefer esbuild for the extension bundle
+  unless a future webview asset pipeline requires a heavier bundler.
 
 ### Tests
 
@@ -53,6 +55,8 @@ rot, stale docs, and untested behavior from accumulating.
 - A sample `.handlebars` file renders with adjacent JSON context.
 - Missing or invalid context fails in a way users can understand.
 - Webview behavior remains compatible with the supported VS Code engine.
+- Extension behavior remains compatible with VS Code for the Web and virtual
+  workspaces unless a documented feature intentionally narrows support.
 - Webview scripts remain disabled unless an intentionally documented feature
   requires them.
 

@@ -36,5 +36,8 @@ jobs:
       - name: Test
         run: xvfb-run -a npm test
 
+      - name: Test Web
+        run: xvfb-run -a npm run test:web
+
       - name: Package
         run: npm run package
