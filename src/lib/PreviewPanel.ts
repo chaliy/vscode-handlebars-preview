@@ -19,9 +19,30 @@ function resolveFileOrText(fileName: string): string {
 
 function getWebviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
 	return {
-		enableScripts: true,
+		enableScripts: false,
 		localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')]
 	};
+}
+
+function renderWebviewDocument(webview: vscode.Webview, body: string): string {
+	const contentSecurityPolicy = [
+		"default-src 'none'",
+		`img-src ${webview.cspSource} https: data:`,
+		`style-src ${webview.cspSource} 'unsafe-inline'`
+	].join("; ");
+
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="Content-Security-Policy" content="${contentSecurityPolicy}">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Handlebars HTML Preview</title>
+</head>
+<body>
+${body}
+</body>
+</html>`;
 }
 
 export class PreviewPanel {
@@ -30,7 +51,6 @@ export class PreviewPanel {
 	public static readonly viewType = 'handlebars';
 
 	private readonly _panel: vscode.WebviewPanel;
-	private readonly _extensionUri: vscode.Uri;
 	private _fileName: string = "";
     private _dataFileName: string = "";
 	private _disposables: vscode.Disposable[] = [];
@@ -39,13 +59,13 @@ export class PreviewPanel {
 		if (vscode.window.registerWebviewPanelSerializer) {
 			// Make sure we register a serializer in activation event
 			vscode.window.registerWebviewPanelSerializer(PreviewPanel.viewType, {
-				async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
+				async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
 					// Reset the webview options so we use latest uri for `localResourceRoots`.
 					webviewPanel.webview.options = {
 						enableScripts: false,
 						localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')]
 					};
-					PreviewPanel.revive(webviewPanel, context.extensionUri);
+					PreviewPanel.revive(webviewPanel);
 				}
 			});
 		}
@@ -66,11 +86,11 @@ export class PreviewPanel {
 			getWebviewOptions(extensionUri),
 		);
 
-		PreviewPanel.currentPanel = new PreviewPanel(panel, extensionUri);
+		PreviewPanel.currentPanel = new PreviewPanel(panel);
 	}
 
-	public static revive(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-		PreviewPanel.currentPanel = new PreviewPanel(panel, extensionUri);
+	public static revive(panel: vscode.WebviewPanel) {
+		PreviewPanel.currentPanel = new PreviewPanel(panel);
 	}
 
 	public static update() {
@@ -79,9 +99,8 @@ export class PreviewPanel {
 		}
 	}
 
-	private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+	private constructor(panel: vscode.WebviewPanel) {
 		this._panel = panel;
-		this._extensionUri = extensionUri;
 
 		// Set the webview's initial html content
 		this.update();
@@ -92,7 +111,7 @@ export class PreviewPanel {
 
 		// Update the content based on view changes
 		this._panel.onDidChangeViewState(
-			e => {
+			() => {
 				if (this._panel.visible) {
 					this.update();
 				}
@@ -101,24 +120,6 @@ export class PreviewPanel {
 			this._disposables
 		);
 
-		// Handle messages from the webview
-		this._panel.webview.onDidReceiveMessage(
-			message => {
-				switch (message.command) {
-					case 'alert':
-						vscode.window.showErrorMessage(message.text);
-						return;
-				}
-			},
-			null,
-			this._disposables
-		);
-	}
-
-	public doRefactor() {
-		// Send a message to the webview webview.
-		// You can send any JSON serializable data.
-		this._panel.webview.postMessage({ command: 'refactor' });
 	}
 
 	public dispose() {
@@ -136,7 +137,7 @@ export class PreviewPanel {
 	}
 
 	private update() {
-		this._panel.webview.html = this.generateHtmlPreview();
+		this._panel.webview.html = renderWebviewDocument(this._panel.webview, this.generateHtmlPreview());
 	}
 
 	private generateHtmlPreview() {
@@ -165,9 +166,7 @@ export class PreviewPanel {
         }
         
         return `
-            <body>
-                <p>No active text editor selected....</p>
-            </body>
+            <p>No active text editor selected....</p>
         `;
 	}
 }

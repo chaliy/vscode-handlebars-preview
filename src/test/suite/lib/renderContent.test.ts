@@ -12,4 +12,25 @@ suite("lib/renderContent", () => {
     const html = renderContent("Super {{foo}}!", "{ \"foo\": \"bar\" }");
     assert.equal(html, "Super bar!");
   });
+
+  test("render with missing context", () => {
+    const html = renderContent("Super {{foo}}!", null);
+    assert.equal(html, "Super !");
+  });
+
+  test("render invalid context as escaped error", () => {
+    const html = renderContent("Super {{foo}}!", "{");
+
+    assert.match(html, /Error occurred/);
+    assert.match(html, /SyntaxError/);
+    assert.doesNotMatch(html, /Error occured/);
+  });
+
+  test("escape thrown render errors", () => {
+    const html = renderContent("<script>{{#if foo}}", "{\"foo\": true}");
+
+    assert.match(html, /Error occurred/);
+    assert.doesNotMatch(html, /<script>/);
+    assert.match(html, /&lt;script&gt;/);
+  });
 });

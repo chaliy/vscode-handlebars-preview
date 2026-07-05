@@ -2,10 +2,13 @@
 
 Live preview for your Handlebars templates. Extension compiles Handlebars template on the fly, apply preview data and render resulting HTML in separate window.
 
+Requires Visual Studio Code 1.125.0 or newer.
+
 ## Features
 
 - Live preview for Handlebars templates. Preview updates as you type.
 - Support for fake data. Add file `yourtemplate.handlebars.json` to be a context of the template
+- Preview webviews run with scripts disabled and a restrictive content security policy.
 
 ## Example
 
@@ -13,8 +16,8 @@ Live preview for your Handlebars templates. Extension compiles Handlebars templa
 
 ## Usage
 
-- Use the keybinding 'ctrl+k h'
-- To run from command panel 'ctrl+shift+p' and type "Handlebars: Open Preview"
+- Use the keybinding `ctrl+k h`.
+- To run from the command palette, use `ctrl+shift+p` and type `Handlebars: Open Preview`.
 
 ## Credits
 
@@ -24,4 +27,4 @@ Live preview for your Handlebars templates. Extension compiles Handlebars templa
 
 ## License
 
-MIT (Except russians)
+MIT

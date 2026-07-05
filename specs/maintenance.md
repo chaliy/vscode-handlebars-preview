@@ -24,6 +24,8 @@ rot, stale docs, and untested behavior from accumulating.
 - `package-lock.json` stays consistent with `package.json`.
 - Major dependency upgrades are allowed when they keep the extension working;
   large migrations may be split into tracked follow-up work.
+- Legacy scaffold dependencies should be removed when local code can replace
+  them without increasing maintenance cost.
 
 ### Tests
 
@@ -51,6 +53,8 @@ rot, stale docs, and untested behavior from accumulating.
 - A sample `.handlebars` file renders with adjacent JSON context.
 - Missing or invalid context fails in a way users can understand.
 - Webview behavior remains compatible with the supported VS Code engine.
+- Webview scripts remain disabled unless an intentionally documented feature
+  requires them.
 
 ## Deferred Items
 
