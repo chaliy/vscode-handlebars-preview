@@ -8,6 +8,7 @@ const supportedFontExtensions = new Set(['.woff', '.woff2', '.ttf', '.otf', '.eo
 const supportedStylesheetExtensions = new Set(['.css']);
 const cssImportStringPattern = /@import\s+(["'])(.*?)\1/gi;
 const cssUrlPattern = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*?))\s*\)/gi;
+const refreshDebounceMs = 75;
 
 type WebviewResourceAdapter = Pick<vscode.Webview, 'asWebviewUri' | 'cspSource'>;
 
@@ -25,6 +26,13 @@ function uriEquals(left: vscode.Uri | undefined, right: vscode.Uri | undefined):
 
 function uriFromConfigurationValue(value: string): vscode.Uri {
 	return /^[a-z][a-z0-9+.-]*:/i.test(value) ? vscode.Uri.parse(value) : vscode.Uri.file(value);
+}
+
+export function getPartialUrisFromConfigurationValues(values: readonly string[]): vscode.Uri[] {
+	return values
+		.map(value => value.trim())
+		.filter(Boolean)
+		.map(uriFromConfigurationValue);
 }
 
 function basenameWithoutExtension(uri: vscode.Uri): string {
@@ -56,6 +64,11 @@ function getUnsafeHelpersConfiguration(): { enabled: boolean; file: string } {
 		enabled: config.get<boolean>('enabled') ?? false,
 		file: config.get<string>('file')?.trim() ?? ''
 	};
+}
+
+function getConfiguredPartialUris(): vscode.Uri[] {
+	const config = vscode.workspace.getConfiguration("handlebars");
+	return getPartialUrisFromConfigurationValues(config.get<string[]>("partials") ?? []);
 }
 
 export function sanitizeBackgroundColor(value: string | undefined): string | undefined {
@@ -158,6 +171,27 @@ export function getWebviewOptions(extensionUri: vscode.Uri, templateUri?: vscode
 		enableScripts: false,
 		localResourceRoots
 	};
+}
+
+export function getWatchDirectoriesForUris(uris: readonly vscode.Uri[]): vscode.Uri[] {
+	const seen = new Set<string>();
+	const directories: vscode.Uri[] = [];
+
+	uris.forEach(uri => {
+		if (uri.scheme === 'untitled') {
+			return;
+		}
+
+		const directory = getDirectoryUri(uri);
+		const key = directory.toString();
+
+		if (!seen.has(key)) {
+			seen.add(key);
+			directories.push(directory);
+		}
+	});
+
+	return directories;
 }
 
 function splitResourceReference(value: string): { path: string; query: string; fragment: string } {
@@ -383,7 +417,10 @@ export class PreviewPanel {
 	private _templateUri: vscode.Uri | undefined;
 	private _dataUri: vscode.Uri | undefined;
 	private _helperUri: vscode.Uri | undefined;
+	private _partialUris: vscode.Uri[] = [];
 	private _disposables: vscode.Disposable[] = [];
+	private _fileWatcherDisposables: vscode.Disposable[] = [];
+	private _refreshTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
 	private _updateSequence = 0;
 
 	public static activate(context: vscode.ExtensionContext) {
@@ -424,7 +461,7 @@ export class PreviewPanel {
 
 	public static update() {
 		if (PreviewPanel.currentPanel) {
-			void PreviewPanel.currentPanel.update({ useActiveEditor: false });
+			PreviewPanel.currentPanel.scheduleUpdate({ useActiveEditor: false });
 		}
 	}
 
@@ -436,7 +473,7 @@ export class PreviewPanel {
 
 	public static refreshForUri(uri: vscode.Uri) {
 		if (PreviewPanel.currentPanel?.tracksUri(uri)) {
-			void PreviewPanel.currentPanel.update({ useActiveEditor: false });
+			PreviewPanel.currentPanel.scheduleUpdate({ useActiveEditor: false });
 		}
 	}
 
@@ -473,6 +510,8 @@ export class PreviewPanel {
 
 	public dispose() {
 		PreviewPanel.currentPanel = undefined;
+		this.clearScheduledUpdate();
+		this.disposeFileWatchers();
 
 		// Clean up our resources
 		this._panel.dispose();
@@ -485,7 +524,23 @@ export class PreviewPanel {
 		}
 	}
 
+	private scheduleUpdate(options: { useActiveEditor: boolean }) {
+		this.clearScheduledUpdate();
+		this._refreshTimer = globalThis.setTimeout(() => {
+			this._refreshTimer = undefined;
+			void this.update(options);
+		}, refreshDebounceMs);
+	}
+
+	private clearScheduledUpdate() {
+		if (this._refreshTimer !== undefined) {
+			globalThis.clearTimeout(this._refreshTimer);
+			this._refreshTimer = undefined;
+		}
+	}
+
 	private async update(options: { useActiveEditor: boolean }): Promise<string> {
+		this.clearScheduledUpdate();
 		const updateSequence = ++this._updateSequence;
 		const body = await this.generateHtmlPreview(options.useActiveEditor);
 		const html = renderWebviewDocument(this._panel.webview, body, this._templateUri, getBackgroundColor());
@@ -498,12 +553,9 @@ export class PreviewPanel {
 	}
 
 	private async loadPartials(): Promise<Partials> {
-		const config = vscode.workspace.getConfiguration("handlebars");
-		const partialValues = config.get<string[]>("partials") ?? [];
 		const partials: Partials = {};
 
-		await Promise.all(partialValues.map(async value => {
-			const uri = uriFromConfigurationValue(value);
+		await Promise.all(this._partialUris.map(async uri => {
 			const partialName = basenameWithoutExtension(uri);
 
 			if (partialName) {
@@ -595,10 +647,45 @@ export class PreviewPanel {
 		if (this._templateUri) {
 			this._dataUri = getDataUriForTemplate(this._templateUri, getDataFileSuffix());
 			this._helperUri = getHelperUriForTemplate(this._templateUri, getUnsafeHelpersConfiguration().file);
+			this._partialUris = getConfiguredPartialUris();
+			this.updateFileWatchers();
 		}
 	}
 
 	private tracksUri(uri: vscode.Uri): boolean {
-		return uriEquals(this._templateUri, uri) || uriEquals(this._dataUri, uri) || uriEquals(this._helperUri, uri);
+		return uriEquals(this._templateUri, uri)
+			|| uriEquals(this._dataUri, uri)
+			|| uriEquals(this._helperUri, uri)
+			|| this._partialUris.some(partialUri => uriEquals(partialUri, uri));
+	}
+
+	private getTrackedUris(): vscode.Uri[] {
+		return [
+			this._templateUri,
+			this._dataUri,
+			this._helperUri,
+			...this._partialUris
+		].filter((uri): uri is vscode.Uri => uri !== undefined);
+	}
+
+	private disposeFileWatchers() {
+		while (this._fileWatcherDisposables.length) {
+			const disposable = this._fileWatcherDisposables.pop();
+			disposable?.dispose();
+		}
+	}
+
+	private updateFileWatchers() {
+		this.disposeFileWatchers();
+
+		getWatchDirectoriesForUris(this.getTrackedUris()).forEach(directory => {
+			const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(directory, '*'));
+			this._fileWatcherDisposables.push(
+				watcher,
+				watcher.onDidChange(uri => PreviewPanel.refreshForUri(uri)),
+				watcher.onDidCreate(uri => PreviewPanel.refreshForUri(uri)),
+				watcher.onDidDelete(uri => PreviewPanel.refreshForUri(uri))
+			);
+		});
 	}
 }

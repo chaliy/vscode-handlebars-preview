@@ -16,6 +16,8 @@
 - Add regression coverage for missing/invalid JSON context, escaped render errors, preview command wiring, and rendered preview output.
 - Add GitHub Actions CI for compile, lint, desktop tests, web tests, audit, and package validation.
 - Add `Handlebars: Load Partials` for workspace-configured partial files.
+- Refresh previews when configured partial files change, without watching the
+  entire workspace.
 - Add opt-in custom helper loading for trusted desktop workspaces through
   `handlebarsPreview.unsafeHelpers.*` settings.
 - Add `handlebarsPreview.backgroundColor` to override the preview webview background.

@@ -32,7 +32,13 @@ work stays small, testable, and aligned with VS Code extension behavior.
   JSON context; missing or invalid context should fail predictably and be
   covered by tests.
 - Preview updates should refresh when the active template, its open text
-  document, or its adjacent data file changes.
+  document, its adjacent data file, its helper file, or configured partial
+  files change.
+- Preview refreshes from file and text-document changes should be coalesced so
+  rapid edits do not start redundant renders.
+- File watching should stay scoped to directories for the active preview's
+  template, data, helper, and partial resources instead of watching the entire
+  workspace.
 - Configured partial files are loaded by the preview panel and passed into the
   renderer by basename without requiring VS Code APIs in renderer tests.
 - Custom helper modules are disabled by default and must require explicit

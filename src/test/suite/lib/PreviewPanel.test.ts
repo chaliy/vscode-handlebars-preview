@@ -3,6 +3,8 @@ import * as vscode from "vscode";
 import {
   getDataUriForTemplate,
   getHelperUriForTemplate,
+  getPartialUrisFromConfigurationValues,
+  getWatchDirectoriesForUris,
   getWebviewOptions,
   renderWebviewDocument,
   rewriteLocalFontUrls,
@@ -96,6 +98,34 @@ suite("lib/PreviewPanel", () => {
     const helperUri = getHelperUriForTemplate(templateUri, "_preview_handlebars.js");
 
     assert.equal(helperUri.toString(), "file:///workspace/templates/_preview_handlebars.js");
+  });
+
+  test("normalizes configured partial uris and skips empty values", () => {
+    const partialUris = getPartialUrisFromConfigurationValues([
+      "",
+      "  file:///workspace/partials/card.handlebars  ",
+      "/workspace/partials/footer.handlebars"
+    ]);
+
+    assert.deepEqual(partialUris.map(uri => uri.toString()), [
+      "file:///workspace/partials/card.handlebars",
+      "file:///workspace/partials/footer.handlebars"
+    ]);
+  });
+
+  test("watches only directories for tracked non-untitled resources", () => {
+    const directories = getWatchDirectoriesForUris([
+      vscode.Uri.file("/workspace/templates/email.handlebars"),
+      vscode.Uri.file("/workspace/templates/email.handlebars.json"),
+      vscode.Uri.file("/workspace/partials/card.handlebars"),
+      vscode.Uri.file("/workspace/partials/footer.handlebars"),
+      vscode.Uri.parse("untitled:Untitled-1")
+    ]);
+
+    assert.deepEqual(directories.map(uri => uri.toString()), [
+      "file:///workspace/templates",
+      "file:///workspace/partials"
+    ]);
   });
 
   test("accepts simple CSS background colors", () => {
