@@ -9,6 +9,12 @@ const supportedStylesheetExtensions = new Set(['.css']);
 const cssImportStringPattern = /@import\s+(["'])(.*?)\1/gi;
 const cssUrlPattern = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*?))\s*\)/gi;
 const refreshDebounceMs = 75;
+export type PreviewMode = 'visual' | 'source';
+
+const previewTitles: Record<PreviewMode, string> = {
+	visual: 'Handlebars HTML Preview',
+	source: 'Handlebars Source Preview'
+};
 
 type WebviewResourceAdapter = Pick<vscode.Webview, 'asWebviewUri' | 'cspSource'>;
 
@@ -377,11 +383,37 @@ export function rewriteLocalFontUrls(
 		});
 }
 
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
+function getPreviewTitle(mode: PreviewMode): string {
+	return previewTitles[mode];
+}
+
+function getPreviewModeFromTitle(title: string): PreviewMode {
+	return title === previewTitles.source ? 'source' : 'visual';
+}
+
+export function renderPreviewBody(renderedOutput: string, mode: PreviewMode): string {
+	if (mode === 'visual') {
+		return renderedOutput;
+	}
+
+	return `<main class="source-preview" aria-label="Generated source preview"><pre><code>${escapeHtml(renderedOutput)}</code></pre></main>`;
+}
+
 export function renderWebviewDocument(
 	webview: WebviewResourceAdapter,
 	body: string,
 	templateUri?: vscode.Uri,
-	backgroundColor?: string
+	backgroundColor?: string,
+	mode: PreviewMode = 'visual'
 ): string {
 	const renderedBody = templateUri ? rewriteLocalFontUrls(body, templateUri, webview) : body;
 	const contentSecurityPolicy = [
@@ -392,6 +424,28 @@ export function renderWebviewDocument(
 	].join("; ");
 	const safeBackgroundColor = sanitizeBackgroundColor(backgroundColor);
 	const bodyAttributes = safeBackgroundColor ? ` style="background-color: ${safeBackgroundColor};"` : "";
+	const sourcePreviewStyle = mode === 'source' ? `
+	<style>
+		.source-preview {
+			box-sizing: border-box;
+			min-height: 100vh;
+			padding: 1rem;
+			color: var(--vscode-editor-foreground);
+			background: var(--vscode-editor-background);
+		}
+
+		.source-preview pre {
+			margin: 0;
+			white-space: pre-wrap;
+			overflow-wrap: anywhere;
+		}
+
+		.source-preview code {
+			font-family: var(--vscode-editor-font-family, monospace);
+			font-size: var(--vscode-editor-font-size, 13px);
+			line-height: 1.5;
+		}
+	</style>` : '';
 
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -399,7 +453,8 @@ export function renderWebviewDocument(
 	<meta charset="UTF-8">
 	<meta http-equiv="Content-Security-Policy" content="${contentSecurityPolicy}">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Handlebars HTML Preview</title>
+	<title>${getPreviewTitle(mode)}</title>
+	${sourcePreviewStyle}
 </head>
 <body${bodyAttributes}>
 ${renderedBody}
@@ -422,6 +477,7 @@ export class PreviewPanel {
 	private _fileWatcherDisposables: vscode.Disposable[] = [];
 	private _refreshTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
 	private _updateSequence = 0;
+	private _mode: PreviewMode;
 
 	public static activate(context: vscode.ExtensionContext) {
 		if (vscode.window.registerWebviewPanelSerializer) {
@@ -430,15 +486,16 @@ export class PreviewPanel {
 				async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
 					// Reset the webview options so we use latest uri for `localResourceRoots`.
 					webviewPanel.webview.options = getWebviewOptions(context.extensionUri);
-					PreviewPanel.revive(webviewPanel, context.extensionUri);
+					PreviewPanel.revive(webviewPanel, context.extensionUri, getPreviewModeFromTitle(webviewPanel.title));
 				}
 			});
 		}
 	}
 
-	public static async createOrShow(extensionUri: vscode.Uri): Promise<string | undefined> {
+	public static async createOrShow(extensionUri: vscode.Uri, mode: PreviewMode = 'visual'): Promise<string | undefined> {
 		// If we already have a panel, show it.
 		if (PreviewPanel.currentPanel) {
+			PreviewPanel.currentPanel.setMode(mode);
 			PreviewPanel.currentPanel._panel.reveal(vscode.ViewColumn.Two);
 			return PreviewPanel.currentPanel.update({ useActiveEditor: true });
 		}
@@ -446,17 +503,17 @@ export class PreviewPanel {
 		// Otherwise, create a new panel.
 		const panel = vscode.window.createWebviewPanel(
 			PreviewPanel.viewType,
-			'Handlebars HTML Preview',
+			getPreviewTitle(mode),
 			vscode.ViewColumn.Two,
 			getWebviewOptions(extensionUri),
 		);
 
-		PreviewPanel.currentPanel = new PreviewPanel(panel, extensionUri);
+		PreviewPanel.currentPanel = new PreviewPanel(panel, extensionUri, mode);
 		return PreviewPanel.currentPanel.update({ useActiveEditor: true });
 	}
 
-	public static revive(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-		PreviewPanel.currentPanel = new PreviewPanel(panel, extensionUri);
+	public static revive(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, mode: PreviewMode = 'visual') {
+		PreviewPanel.currentPanel = new PreviewPanel(panel, extensionUri, mode);
 	}
 
 	public static update() {
@@ -484,9 +541,11 @@ export class PreviewPanel {
 		}
 	}
 
-	private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+	private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, mode: PreviewMode) {
 		this._panel = panel;
 		this._extensionUri = extensionUri;
+		this._mode = mode;
+		this._panel.title = getPreviewTitle(mode);
 
 		// Set the webview's initial html content
 		void this.update({ useActiveEditor: true });
@@ -542,8 +601,9 @@ export class PreviewPanel {
 	private async update(options: { useActiveEditor: boolean }): Promise<string> {
 		this.clearScheduledUpdate();
 		const updateSequence = ++this._updateSequence;
-		const body = await this.generateHtmlPreview(options.useActiveEditor);
-		const html = renderWebviewDocument(this._panel.webview, body, this._templateUri, getBackgroundColor());
+		const renderedOutput = await this.generateHtmlPreview(options.useActiveEditor);
+		const body = renderPreviewBody(renderedOutput, this._mode);
+		const html = renderWebviewDocument(this._panel.webview, body, this._templateUri, getBackgroundColor(), this._mode);
 
 		if (updateSequence === this._updateSequence) {
 			this._panel.webview.html = html;
@@ -612,6 +672,11 @@ export class PreviewPanel {
 				error: new Error(`Failed to load Handlebars helpers from ${this._helperUri.toString()}: ${error}`)
 			};
 		}
+	}
+
+	private setMode(mode: PreviewMode) {
+		this._mode = mode;
+		this._panel.title = getPreviewTitle(mode);
 	}
 
 	private async generateHtmlPreview(useActiveEditor: boolean): Promise<string> {

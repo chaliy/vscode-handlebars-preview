@@ -22,6 +22,7 @@ export function activate(context: ExtensionContext) {
             PreviewPanel.refreshForUri(e.document.uri);
         }),
         commands.registerCommand('handlebars.preview', () => PreviewPanel.createOrShow(context.extensionUri)),
+        commands.registerCommand('handlebars.previewSource', () => PreviewPanel.createOrShow(context.extensionUri, 'source')),
         commands.registerCommand('handlebars.loadPartials', async () => {
             const uris = await window.showOpenDialog({
                 canSelectMany: true,

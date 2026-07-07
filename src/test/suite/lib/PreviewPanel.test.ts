@@ -6,6 +6,7 @@ import {
   getPartialUrisFromConfigurationValues,
   getWatchDirectoriesForUris,
   getWebviewOptions,
+  renderPreviewBody,
   renderWebviewDocument,
   rewriteLocalFontUrls,
   sanitizeBackgroundColor
@@ -155,5 +156,20 @@ suite("lib/PreviewPanel", () => {
 
     assert.match(html, /<body>/);
     assert.doesNotMatch(html, /background-color/);
+  });
+
+  test("renders source preview body as escaped whitespace-preserving code", () => {
+    const body = renderPreviewBody("<section>\n  Hello & goodbye\n</section>", "source");
+
+    assert.equal(
+      body,
+      "<main class=\"source-preview\" aria-label=\"Generated source preview\"><pre><code>&lt;section&gt;\n  Hello &amp; goodbye\n&lt;/section&gt;</code></pre></main>",
+    );
+  });
+
+  test("leaves visual preview body unchanged", () => {
+    const body = renderPreviewBody("<section>Hello</section>", "visual");
+
+    assert.equal(body, "<section>Hello</section>");
   });
 });

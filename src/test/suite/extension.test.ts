@@ -138,4 +138,26 @@ suite('extension', () => {
 			await config.update('backgroundColor', previousBackgroundColor, vscode.ConfigurationTarget.Global);
 		}
 	});
+
+	test('opens source preview command with escaped rendered output', async () => {
+		const extensionUri = vscode.extensions.getExtension('chaliy.handlebars-preview')?.extensionUri;
+		assert.ok(extensionUri);
+
+		const document = await vscode.workspace.openTextDocument(
+			vscode.Uri.joinPath(extensionUri, 'src/test/examples/simple.handlebars')
+		);
+
+		await vscode.window.showTextDocument(document);
+		const html = await vscode.commands.executeCommand<string>('handlebars.previewSource');
+
+		assert.ok(html);
+		assert.match(html, /<title>Handlebars Source Preview<\/title>/);
+		assert.match(html, /<pre><code>Super bar!\nComparison helper ok!\n<\/code><\/pre>/);
+
+		const webviewTabs = vscode.window.tabGroups.all
+			.flatMap(group => group.tabs)
+			.filter(tab => tab.input instanceof vscode.TabInputWebview);
+
+		assert.ok(webviewTabs.some(tab => tab.label === 'Handlebars Source Preview'));
+	});
 });

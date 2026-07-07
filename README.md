@@ -8,6 +8,7 @@ Runs in VS Code desktop, remote workspaces, and VS Code for the Web.
 ## Features
 
 - Live preview for Handlebars templates. Preview updates as you type.
+- Source preview for generated markup or text output with whitespace preserved.
 - Support for fake data. Add file `yourtemplate.handlebars.json` to be a context of the template.
 - Configurable preview data suffix through `handlebarsPreview.dataFileSuffix`.
 - Configurable preview background color through `handlebarsPreview.backgroundColor`.
@@ -26,6 +27,7 @@ Runs in VS Code desktop, remote workspaces, and VS Code for the Web.
 
 - Use the keybinding `ctrl+k h`.
 - To run from the command palette, use `ctrl+shift+p` and type `Handlebars: Open Preview`.
+- To inspect the generated HTML/source or preserve non-HTML text formatting, run `Handlebars: Open Source Preview`.
 - By default, preview data is read from the template file name plus `.json`, such as `email.handlebars.json`.
 - To register partials for preview rendering, run `Handlebars: Load Partials` and select one or more partial files. Each partial is available by its file basename, and edits to selected partials refresh the active preview.
 - Set `handlebarsPreview.backgroundColor` to a CSS color such as `#ffffff`, `white`, or `rgb(255, 255, 255)` to override the preview background.
