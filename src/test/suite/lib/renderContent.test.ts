@@ -26,6 +26,17 @@ suite("lib/renderContent", () => {
     assert.equal(html, "Hello <b>Ada</b>!");
   });
 
+  test("render with built-in comparison helpers", () => {
+    const html = renderContent([
+      "{{#compare count 3}}same{{else}}different{{/compare}}",
+      "{{#compare count \">\" min}}above{{else}}below{{/compare}}",
+      "{{#if (eq status \"active\")}}active{{else}}inactive{{/if}}",
+      "{{eval status}}",
+    ].join(" "), "{ \"count\": \"3\", \"min\": 2, \"status\": \"active\" }");
+
+    assert.equal(html, "same above active active");
+  });
+
   test("does not leak partials between renders", () => {
     renderContent("Hello {{> user}}!", "{ \"name\": \"Ada\" }", {
       user: "<b>{{name}}</b>",

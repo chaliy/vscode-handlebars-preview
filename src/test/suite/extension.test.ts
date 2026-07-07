@@ -54,6 +54,7 @@ suite('extension', () => {
 		assert.ok(html);
 		assert.doesNotMatch(html, /Super \{\{foo\}\}!/);
 		assert.match(html, /Super bar!/);
+		assert.match(html, /Comparison helper ok!/);
 	});
 
 	test('renders local font references through the preview command', async () => {

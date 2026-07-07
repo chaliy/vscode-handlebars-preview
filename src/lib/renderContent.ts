@@ -1,5 +1,6 @@
 import * as Handlebars from "handlebars";
 
+import { registerBuiltinHelpers } from "./builtinHelpers";
 import { HelperRegistrations, registerHelpers } from "./helpers";
 
 export type Partials = Record<string, string>;
@@ -31,6 +32,7 @@ export default (
 
         const data = JSON.parse(dataSource || "{}");
         const handlebars = Handlebars.create();
+        registerBuiltinHelpers(handlebars);
 
         Object.entries(partials).forEach(([name, content]) => {
             handlebars.registerPartial(name, content);

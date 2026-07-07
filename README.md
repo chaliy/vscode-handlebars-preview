@@ -14,6 +14,7 @@ Runs in VS Code desktop, remote workspaces, and VS Code for the Web.
 - Contributes `.handlebars` and `.hbs` language recognition.
 - Support for partials selected from the command palette.
 - Support for local `@font-face` fonts referenced from the template directory.
+- Built-in `compare`, `eq`, and `eval` compatibility helpers.
 - Optional custom helper support from trusted workspace JavaScript.
 - Preview webviews run with scripts disabled and a restrictive content security policy.
 
@@ -29,6 +30,15 @@ Runs in VS Code desktop, remote workspaces, and VS Code for the Web.
 - To register partials for preview rendering, run `Handlebars: Load Partials` and select one or more partial files. Each partial is available by its file basename, and edits to selected partials refresh the active preview.
 - Set `handlebarsPreview.backgroundColor` to a CSS color such as `#ffffff`, `white`, or `rgb(255, 255, 255)` to override the preview background.
 - Local font files referenced from inline styles, `<style>` blocks, local stylesheet links, or local CSS imports can load when they are inside the template directory. Supported font file extensions are `.woff`, `.woff2`, `.ttf`, `.otf`, and `.eot`.
+
+## Built-in helpers
+
+The preview registers a small set of compatibility helpers by default:
+
+- `{{#compare left right}}...{{else}}...{{/compare}}` compares with loose equality.
+- `{{#compare left ">" right}}...{{/compare}}` also supports `==`, `===`, `!=`, `!==`, `<`, `>`, `<=`, `>=`, and `typeof`.
+- `{{eq left right}}` returns a boolean and can be used as a block helper or subexpression.
+- `{{eval value}}` returns the already-evaluated Handlebars value. It does not execute JavaScript.
 
 ## Custom helpers
 
