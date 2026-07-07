@@ -12,6 +12,8 @@ work stays small, testable, and aligned with VS Code extension behavior.
 ## Requirements
 
 - Extension activation remains command-driven through `handlebars.preview`.
+- Source preview activation remains command-driven through
+  `handlebars.previewSource`.
 - The extension remains web-compatible and exposes a `browser` entry in
   `package.json`.
 - Command wiring and VS Code API integration belong near `src/extension.ts`.
@@ -33,6 +35,9 @@ work stays small, testable, and aligned with VS Code extension behavior.
   covered by tests.
 - The renderer registers built-in `compare`, `eq`, and safe identity `eval`
   helpers on each isolated Handlebars instance for template compatibility.
+- Visual preview mode inserts generated output as HTML; source preview mode
+  escapes generated output and presents it in a whitespace-preserving code
+  surface for inspecting markup or non-HTML text.
 - Preview updates should refresh when the active template, its open text
   document, its adjacent data file, its helper file, or configured partial
   files change.

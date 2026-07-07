@@ -22,6 +22,7 @@
   `handlebarsPreview.unsafeHelpers.*` settings.
 - Add `handlebarsPreview.backgroundColor` to override the preview webview background.
 - Add built-in `compare`, `eq`, and safe identity `eval` compatibility helpers.
+- Add `Handlebars: Open Source Preview` to inspect escaped generated output and preserve whitespace for non-HTML text/code rendering.
 
 ## [1.3.1] - 2022-07-19
 - Extension now contributes to Explorer context menu

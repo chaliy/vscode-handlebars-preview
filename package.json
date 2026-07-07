@@ -26,6 +26,7 @@
   ],
   "activationEvents": [
     "onCommand:handlebars.preview",
+    "onCommand:handlebars.previewSource",
     "onCommand:handlebars.loadPartials",
     "onCommand:handlebars.enableUnsafeHelpers",
     "onWebviewPanel:handlebars"
@@ -58,6 +59,10 @@
         "title": "Handlebars: Open Preview"
       },
       {
+        "command": "handlebars.previewSource",
+        "title": "Handlebars: Open Source Preview"
+      },
+      {
         "command": "handlebars.loadPartials",
         "title": "Handlebars: Load Partials"
       },
@@ -79,11 +84,21 @@
           "command": "handlebars.preview",
           "when": "resourceLangId == handlebars",
           "group": "Handlebars"
+        },
+        {
+          "command": "handlebars.previewSource",
+          "when": "resourceLangId == handlebars",
+          "group": "Handlebars"
         }
       ],
       "editor/title/context": [
         {
           "command": "handlebars.preview",
+          "when": "resourceLangId == handlebars",
+          "group": "Handlebars"
+        },
+        {
+          "command": "handlebars.previewSource",
           "when": "resourceLangId == handlebars",
           "group": "Handlebars"
         }
