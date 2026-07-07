@@ -1,7 +1,6 @@
 ---
 name: ship
 description: Bring a change to shippable quality for this VS Code extension, including verification, docs/spec alignment, packaging confidence, and PR readiness.
-user_invocable: true
 ---
 
 # Ship
@@ -34,8 +33,10 @@ known blocker is hidden.
   for a draft PR or a handoff-only result.
 - The PR or handoff summary clearly states what changed, why, risk, smoke
   coverage, and verification.
-- When the user asks to merge, required checks are green before merging and the
-  target branch is monitored until the post-merge checks complete.
+- When the user asks to ship or merge, the PR is configured to merge
+  automatically once required checks are green; if checks are already green,
+  merge it immediately and monitor the target branch until post-merge checks
+  complete.
 
 ## Guidance
 
@@ -53,9 +54,11 @@ known blocker is hidden.
 - For user-facing extension behavior, smoke test the real command path when
   practical: open a representative `.handlebars` document, run
   `handlebars.preview`, and verify the generated preview output.
-- After merge, monitor the merge commit or target branch CI. If monitoring
-  finds a failure, keep working the root cause instead of declaring the ship
-  complete.
+- After opening a ready PR, check required status. If checks are pending, enable
+  auto-merge instead of stopping for the user. If checks are green, merge
+  immediately.
+- After merge, monitor the merge commit or target branch CI. If monitoring finds
+  a failure, keep working the root cause instead of declaring the ship complete.
 
 ## Useful Commands
 
@@ -69,6 +72,7 @@ npm run test:web
 npm run package
 gh pr ready
 gh pr checks --watch
+gh pr merge --auto
 gh pr merge
 gh run watch
 ```

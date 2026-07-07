@@ -13,6 +13,7 @@ export function activate(context: ExtensionContext) {
         workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('handlebarsPreview.dataFileSuffix')
                 || e.affectsConfiguration('handlebars.partials')
+                || e.affectsConfiguration('handlebarsPreview.backgroundColor')
                 || e.affectsConfiguration('handlebarsPreview.unsafeHelpers')) {
                 PreviewPanel.updateConfiguration();
             }

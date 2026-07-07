@@ -7,7 +7,8 @@ import {
   getWatchDirectoriesForUris,
   getWebviewOptions,
   renderWebviewDocument,
-  rewriteLocalFontUrls
+  rewriteLocalFontUrls,
+  sanitizeBackgroundColor
 } from "../../../lib/PreviewPanel";
 import * as assert from "../assertions";
 
@@ -125,5 +126,34 @@ suite("lib/PreviewPanel", () => {
       "file:///workspace/templates",
       "file:///workspace/partials"
     ]);
+  });
+
+  test("accepts simple CSS background colors", () => {
+    assert.equal(sanitizeBackgroundColor(" #fff "), "#fff");
+    assert.equal(sanitizeBackgroundColor("#11223344"), "#11223344");
+    assert.equal(sanitizeBackgroundColor("white"), "white");
+    assert.equal(sanitizeBackgroundColor("rgb(255, 255, 255)"), "rgb(255, 255, 255)");
+    assert.equal(sanitizeBackgroundColor("rgba(255, 255, 255, 0.75)"), "rgba(255, 255, 255, 0.75)");
+    assert.equal(sanitizeBackgroundColor("hsl(210, 20%, 95%)"), "hsl(210, 20%, 95%)");
+  });
+
+  test("rejects CSS background color values that could inject declarations", () => {
+    assert.equal(sanitizeBackgroundColor("red; color: blue"), undefined);
+    assert.equal(sanitizeBackgroundColor("url(https://example.com/bg.png)"), undefined);
+    assert.equal(sanitizeBackgroundColor("#fff\" onclick=\"alert(1)"), undefined);
+  });
+
+  test("renders sanitized background color on preview body", () => {
+    const html = renderWebviewDocument(fakeWebview, "<p>Hello</p>", undefined, "#fafafa");
+
+    assert.match(html, /<body style="background-color: #fafafa;">/);
+    assert.match(html, /<p>Hello<\/p>/);
+  });
+
+  test("omits unsupported background colors from preview body", () => {
+    const html = renderWebviewDocument(fakeWebview, "<p>Hello</p>", undefined, "red; color: blue");
+
+    assert.match(html, /<body>/);
+    assert.doesNotMatch(html, /background-color/);
   });
 });

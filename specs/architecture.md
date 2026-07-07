@@ -25,6 +25,9 @@ work stays small, testable, and aligned with VS Code extension behavior.
   window when practical.
 - The default preview data file convention remains `template.handlebars.json`;
   the appended suffix is configurable with `handlebarsPreview.dataFileSuffix`.
+- Preview webview background color is configurable with
+  `handlebarsPreview.backgroundColor`; empty or unsupported values leave the
+  default VS Code webview background unchanged.
 - Webview output should be generated from compiled Handlebars and the matching
   JSON context; missing or invalid context should fail predictably and be
   covered by tests.
@@ -53,6 +56,8 @@ work stays small, testable, and aligned with VS Code extension behavior.
   after rewriting eligible stylesheet references to VS Code webview resource
   URIs. This must not enable scripts or broaden local resource roots beyond the
   extension media directory and the active template directory.
+- User-configured webview CSS values must be validated before insertion into
+  generated HTML.
 
 ## Design Principles
 
