@@ -27,6 +27,7 @@
   "activationEvents": [
     "onCommand:handlebars.preview",
     "onCommand:handlebars.loadPartials",
+    "onCommand:handlebars.enableUnsafeHelpers",
     "onWebviewPanel:handlebars"
   ],
   "main": "./out/extension.js",
@@ -59,6 +60,10 @@
       {
         "command": "handlebars.loadPartials",
         "title": "Handlebars: Load Partials"
+      },
+      {
+        "command": "handlebars.enableUnsafeHelpers",
+        "title": "Handlebars: Enable Unsafe Helpers"
       }
     ],
     "keybindings": [
@@ -100,6 +105,18 @@
           "type": "string",
           "default": ".json",
           "description": "Suffix appended to the template file name to find preview data."
+        },
+        "handlebarsPreview.unsafeHelpers.enabled": {
+          "type": "boolean",
+          "default": false,
+          "restricted": true,
+          "description": "Enable loading custom Handlebars helpers from workspace JavaScript. This executes workspace code in trusted desktop workspaces only."
+        },
+        "handlebarsPreview.unsafeHelpers.file": {
+          "type": "string",
+          "default": "",
+          "restricted": true,
+          "description": "Optional helper module path or URI. Relative paths resolve from the workspace folder; leave empty to use the adjacent file convention, such as email.handlebars.js."
         }
       }
     }

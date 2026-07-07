@@ -37,6 +37,49 @@ suite("lib/renderContent", () => {
     assert.match(html, /partial user could not be found/);
   });
 
+  test("render with helper object", () => {
+    const html = renderContent("Super {{shout foo}}!", "{ \"foo\": \"bar\" }", {}, {
+      shout: (value: string) => value.toUpperCase(),
+    });
+
+    assert.equal(html, "Super BAR!");
+  });
+
+  test("render with helper descriptors", () => {
+    const html = renderContent("Super {{shout (ask foo)}}!", "{ \"foo\": \"bar\" }", {}, [
+      { name: "shout", body: (value: string) => value.toUpperCase() },
+      { name: "ask", body: (value: string) => `${value}?` },
+    ]);
+
+    assert.equal(html, "Super BAR?!");
+  });
+
+  test("render with helper registration function", () => {
+    const html = renderContent("Super {{shout foo}}!", "{ \"foo\": \"bar\" }", {}, handlebars => {
+      handlebars.registerHelper("shout", (value: string) => value.toUpperCase());
+    });
+
+    assert.equal(html, "Super BAR!");
+  });
+
+  test("does not leak helpers between renders", () => {
+    renderContent("Super {{shout foo}}!", "{ \"foo\": \"bar\" }", {}, {
+      shout: (value: string) => value.toUpperCase(),
+    });
+
+    const html = renderContent("Super {{shout foo}}!", "{ \"foo\": \"bar\" }");
+
+    assert.match(html, /Error occurred/);
+    assert.match(html, /Missing helper: &quot;shout&quot;/);
+  });
+
+  test("render helper load errors as escaped errors", () => {
+    const html = renderContent("Super {{foo}}!", "{ \"foo\": \"bar\" }", {}, undefined, new Error("<helper failed>"));
+
+    assert.match(html, /Error occurred/);
+    assert.match(html, /&lt;helper failed&gt;/);
+  });
+
   test("render invalid context as escaped error", () => {
     const html = renderContent("Super {{foo}}!", "{");
 

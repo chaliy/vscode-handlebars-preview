@@ -32,6 +32,14 @@ work stays small, testable, and aligned with VS Code extension behavior.
   document, or its adjacent data file changes.
 - Configured partial files are loaded by the preview panel and passed into the
   renderer by basename without requiring VS Code APIs in renderer tests.
+- Custom helper modules are disabled by default and must require explicit
+  workspace configuration or the enable command before workspace JavaScript is
+  executed.
+- Custom helper loading is allowed only in trusted desktop workspaces and only
+  from the configured helper file or the active template's adjacent
+  `template.handlebars.js`/`template.hbs.js` convention.
+- Custom helpers are registered on the isolated Handlebars instance created for
+  the current render, not on the global Handlebars singleton.
 - Preview webviews must keep scripts disabled unless a feature explicitly needs
   them and ships with matching tests and documentation.
 - Preview webviews must include a restrictive content security policy.
