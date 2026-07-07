@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 import {
   getDataUriForTemplate,
+  getHelperUriForTemplate,
   getWebviewOptions,
   renderWebviewDocument,
   rewriteLocalFontUrls
@@ -80,5 +81,19 @@ suite("lib/PreviewPanel", () => {
     const html = renderWebviewDocument(fakeWebview, "<p>Hello</p>", templateUri);
 
     assert.match(html, /default-src 'none'; img-src vscode-webview: https: data:; font-src vscode-webview:; style-src vscode-webview: 'unsafe-inline'/);
+  });
+
+  test("derives adjacent helper uri from template uri", () => {
+    const templateUri = vscode.Uri.parse("file:///workspace/email.handlebars");
+    const helperUri = getHelperUriForTemplate(templateUri);
+
+    assert.equal(helperUri.toString(), "file:///workspace/email.handlebars.js");
+  });
+
+  test("derives configured relative helper uri from template directory without workspace", () => {
+    const templateUri = vscode.Uri.parse("file:///workspace/templates/email.handlebars");
+    const helperUri = getHelperUriForTemplate(templateUri, "_preview_handlebars.js");
+
+    assert.equal(helperUri.toString(), "file:///workspace/templates/_preview_handlebars.js");
   });
 });

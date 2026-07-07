@@ -22,6 +22,8 @@ Define the minimum confidence expected before changes are shipped.
   file before launching `@vscode/test-web`.
 - Rendering changes need focused tests that assert rendered output or expected
   failure behavior.
+- Custom helper changes need focused tests for supported helper export shapes,
+  helper isolation between renders, and useful escaped failure output.
 - VS Code command or panel lifecycle changes need integration tests when the
   behavior can be exercised by the extension test harness.
 - Preview command tests should assert that a `.handlebars` fixture renders with

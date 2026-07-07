@@ -18,7 +18,8 @@ export function activate(context: ExtensionContext) {
         }),
         workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('handlebarsPreview.dataFileSuffix')
-                || e.affectsConfiguration('handlebars.partials')) {
+                || e.affectsConfiguration('handlebars.partials')
+                || e.affectsConfiguration('handlebarsPreview.unsafeHelpers')) {
                 PreviewPanel.updateConfiguration();
             }
         }),
@@ -41,6 +42,21 @@ export function activate(context: ExtensionContext) {
             const uriStrings = uris.map((uri: Uri) => uri.toString());
             await config.update("partials", uriStrings, ConfigurationTarget.Workspace);
             PreviewPanel.update();
+        }),
+        commands.registerCommand('handlebars.enableUnsafeHelpers', async () => {
+            const choice = await window.showWarningMessage(
+                'Custom Handlebars helpers execute JavaScript from this workspace in the extension host. Enable only for workspaces you trust.',
+                { modal: true },
+                'Enable'
+            );
+
+            if (choice !== 'Enable') {
+                return;
+            }
+
+            const config = workspace.getConfiguration('handlebarsPreview.unsafeHelpers');
+            await config.update('enabled', true, ConfigurationTarget.Workspace);
+            PreviewPanel.updateConfiguration();
         })
     );
 

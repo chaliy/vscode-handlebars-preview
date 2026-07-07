@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { HelperRegistrations, normalizeHelperModule } from "./helpers";
 import renderContent, { Partials } from "./renderContent";
 
 const textDecoder = new globalThis.TextDecoder('utf-8');
@@ -9,6 +10,14 @@ const cssImportStringPattern = /@import\s+(["'])(.*?)\1/gi;
 const cssUrlPattern = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*?))\s*\)/gi;
 
 type WebviewResourceAdapter = Pick<vscode.Webview, 'asWebviewUri' | 'cspSource'>;
+
+type DynamicRequire = {
+	(modulePath: string): unknown;
+	resolve(modulePath: string): string;
+	cache: Record<string, unknown>;
+};
+
+declare const require: DynamicRequire | undefined;
 
 function uriEquals(left: vscode.Uri | undefined, right: vscode.Uri | undefined): boolean {
 	return left?.toString() === right?.toString();
@@ -40,6 +49,15 @@ function getDataFileSuffix(): string {
 	return configured?.trim() || '.json';
 }
 
+function getUnsafeHelpersConfiguration(): { enabled: boolean; file: string } {
+	const config = vscode.workspace.getConfiguration('handlebarsPreview.unsafeHelpers');
+
+	return {
+		enabled: config.get<boolean>('enabled') ?? false,
+		file: config.get<string>('file')?.trim() ?? ''
+	};
+}
+
 async function resolveUriOrText(uri: vscode.Uri): Promise<string> {
 	const document = vscode.workspace.textDocuments.find(e => uriEquals(e.uri, uri));
 
@@ -53,6 +71,46 @@ async function resolveUriOrText(uri: vscode.Uri): Promise<string> {
 	} catch {
 		return "";
 	}
+}
+
+async function uriExists(uri: vscode.Uri): Promise<boolean> {
+	try {
+		await vscode.workspace.fs.stat(uri);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function resolveConfiguredHelperUri(templateUri: vscode.Uri, configuredFile: string): vscode.Uri {
+	if (/^[a-z][a-z0-9+.-]*:/i.test(configuredFile)) {
+		return vscode.Uri.parse(configuredFile);
+	}
+
+	if (/^(\/|[a-zA-Z]:[\\/])/.test(configuredFile)) {
+		return vscode.Uri.file(configuredFile);
+	}
+
+	const workspaceFolder = vscode.workspace.getWorkspaceFolder(templateUri);
+	const baseUri = workspaceFolder?.uri ?? getDirectoryUri(templateUri);
+
+	return vscode.Uri.joinPath(baseUri, configuredFile);
+}
+
+export function getHelperUriForTemplate(templateUri: vscode.Uri, configuredFile = ''): vscode.Uri {
+	if (configuredFile.trim()) {
+		return resolveConfiguredHelperUri(templateUri, configuredFile.trim());
+	}
+
+	return templateUri.with({ path: `${templateUri.path}.js` });
+}
+
+function getNodeRequire(): DynamicRequire | undefined {
+	if (typeof require !== "function" || !require.cache || typeof require.resolve !== "function") {
+		return undefined;
+	}
+
+	return require;
 }
 
 export function getWebviewOptions(extensionUri: vscode.Uri, templateUri?: vscode.Uri): vscode.WebviewOptions {
@@ -283,6 +341,7 @@ export class PreviewPanel {
 	private readonly _extensionUri: vscode.Uri;
 	private _templateUri: vscode.Uri | undefined;
 	private _dataUri: vscode.Uri | undefined;
+	private _helperUri: vscode.Uri | undefined;
 	private _disposables: vscode.Disposable[] = [];
 	private _updateSequence = 0;
 
@@ -342,7 +401,7 @@ export class PreviewPanel {
 
 	public static updateConfiguration() {
 		if (PreviewPanel.currentPanel) {
-			PreviewPanel.currentPanel.refreshDataUri();
+			PreviewPanel.currentPanel.refreshRelatedUris();
 			void PreviewPanel.currentPanel.update({ useActiveEditor: false });
 		}
 	}
@@ -414,6 +473,54 @@ export class PreviewPanel {
 		return partials;
 	}
 
+	private async loadHelpers(): Promise<{ helpers?: HelperRegistrations; error?: Error }> {
+		const config = getUnsafeHelpersConfiguration();
+
+		if (!config.enabled || !this._templateUri || !this._helperUri) {
+			return {};
+		}
+
+		if (!vscode.workspace.isTrusted) {
+			return {
+				error: new Error("Custom Handlebars helpers are disabled until the workspace is trusted because loading helpers executes workspace JavaScript.")
+			};
+		}
+
+		if (this._helperUri.scheme !== 'file') {
+			return {
+				error: new Error(`Custom Handlebars helpers can only be loaded from local file paths. Got ${this._helperUri.toString()}.`)
+			};
+		}
+
+		const exists = await uriExists(this._helperUri);
+
+		if (!exists) {
+			return config.file
+				? { error: new Error(`Configured Handlebars helper file was not found: ${this._helperUri.toString()}.`) }
+				: {};
+		}
+
+		const nodeRequire = getNodeRequire();
+
+		if (!nodeRequire) {
+			return {
+				error: new Error("Custom Handlebars helpers require the desktop extension host and are not available in VS Code for the Web.")
+			};
+		}
+
+		try {
+			const modulePath = this._helperUri.fsPath;
+			const resolvedPath = nodeRequire.resolve(modulePath);
+			delete nodeRequire.cache[resolvedPath];
+
+			return { helpers: normalizeHelperModule(nodeRequire(modulePath)) };
+		} catch (error) {
+			return {
+				error: new Error(`Failed to load Handlebars helpers from ${this._helperUri.toString()}: ${error}`)
+			};
+		}
+	}
+
 	private async generateHtmlPreview(useActiveEditor: boolean): Promise<string> {
 		const activeDocument = vscode.window.activeTextEditor?.document;
 
@@ -427,8 +534,9 @@ export class PreviewPanel {
 			const templateSource = await resolveUriOrText(this._templateUri);
 			const dataSource = await resolveUriOrText(this._dataUri);
 			const partials = await this.loadPartials();
+			const helpers = await this.loadHelpers();
 
-			return renderContent(templateSource, dataSource, partials);
+			return renderContent(templateSource, dataSource, partials, helpers.helpers, helpers.error);
 		}
 
 		return `
@@ -438,17 +546,18 @@ export class PreviewPanel {
 
 	private setPreviewSource(templateUri: vscode.Uri) {
 		this._templateUri = templateUri;
-		this._dataUri = getDataUriForTemplate(templateUri, getDataFileSuffix());
 		this._panel.webview.options = getWebviewOptions(this._extensionUri, templateUri);
+		this.refreshRelatedUris();
 	}
 
-	private refreshDataUri() {
+	private refreshRelatedUris() {
 		if (this._templateUri) {
 			this._dataUri = getDataUriForTemplate(this._templateUri, getDataFileSuffix());
+			this._helperUri = getHelperUriForTemplate(this._templateUri, getUnsafeHelpersConfiguration().file);
 		}
 	}
 
 	private tracksUri(uri: vscode.Uri): boolean {
-		return uriEquals(this._templateUri, uri) || uriEquals(this._dataUri, uri);
+		return uriEquals(this._templateUri, uri) || uriEquals(this._dataUri, uri) || uriEquals(this._helperUri, uri);
 	}
 }
