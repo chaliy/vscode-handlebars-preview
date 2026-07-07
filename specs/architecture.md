@@ -35,6 +35,10 @@ work stays small, testable, and aligned with VS Code extension behavior.
 - Preview webviews must keep scripts disabled unless a feature explicitly needs
   them and ships with matching tests and documentation.
 - Preview webviews must include a restrictive content security policy.
+- Preview webviews may load local font files from the active template directory
+  after rewriting eligible stylesheet references to VS Code webview resource
+  URIs. This must not enable scripts or broaden local resource roots beyond the
+  extension media directory and the active template directory.
 
 ## Design Principles
 

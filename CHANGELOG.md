@@ -9,6 +9,7 @@
 - Add `.handlebars` and `.hbs` language contributions and a configurable preview data suffix.
 - Refresh previews when the template or adjacent JSON data file changes on disk.
 - Harden preview webviews by disabling scripts and adding a restrictive content security policy.
+- Support local `@font-face` fonts referenced from the active template directory.
 - Escape renderer error output before showing it in the preview.
 - Replace the legacy `glob` test dependency with a local test-file loader.
 - Remove the legacy custom `@vscode/test-electron` runner entrypoint.
