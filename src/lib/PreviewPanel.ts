@@ -3,6 +3,12 @@ import * as vscode from 'vscode';
 import renderContent, { Partials } from "./renderContent";
 
 const textDecoder = new globalThis.TextDecoder('utf-8');
+const supportedFontExtensions = new Set(['.woff', '.woff2', '.ttf', '.otf', '.eot']);
+const supportedStylesheetExtensions = new Set(['.css']);
+const cssImportStringPattern = /@import\s+(["'])(.*?)\1/gi;
+const cssUrlPattern = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*?))\s*\)/gi;
+
+type WebviewResourceAdapter = Pick<vscode.Webview, 'asWebviewUri' | 'cspSource'>;
 
 function uriEquals(left: vscode.Uri | undefined, right: vscode.Uri | undefined): boolean {
 	return left?.toString() === right?.toString();
@@ -15,6 +21,11 @@ function uriFromConfigurationValue(value: string): vscode.Uri {
 function basenameWithoutExtension(uri: vscode.Uri): string {
 	const basename = uri.path.split('/').pop() ?? '';
 	return basename.replace(/\.[^/.]+$/, '');
+}
+
+function getDirectoryUri(uri: vscode.Uri): vscode.Uri {
+	const path = uri.path.replace(/\/?[^/]*$/, '') || '/';
+	return uri.with({ path, query: '', fragment: '' });
 }
 
 export function getDataUriForTemplate(templateUri: vscode.Uri, dataFileSuffix: string): vscode.Uri {
@@ -44,17 +55,208 @@ async function resolveUriOrText(uri: vscode.Uri): Promise<string> {
 	}
 }
 
-function getWebviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
+export function getWebviewOptions(extensionUri: vscode.Uri, templateUri?: vscode.Uri): vscode.WebviewOptions {
+	const localResourceRoots = [vscode.Uri.joinPath(extensionUri, 'media')];
+
+	if (templateUri?.scheme && templateUri.scheme !== 'untitled') {
+		localResourceRoots.push(getDirectoryUri(templateUri));
+	}
+
 	return {
 		enableScripts: false,
-		localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')]
+		localResourceRoots
 	};
 }
 
-function renderWebviewDocument(webview: vscode.Webview, body: string): string {
+function splitResourceReference(value: string): { path: string; query: string; fragment: string } {
+	const hashIndex = value.indexOf('#');
+	const withoutFragment = hashIndex === -1 ? value : value.slice(0, hashIndex);
+	const fragment = hashIndex === -1 ? '' : value.slice(hashIndex + 1);
+	const queryIndex = withoutFragment.indexOf('?');
+
+	return {
+		path: queryIndex === -1 ? withoutFragment : withoutFragment.slice(0, queryIndex),
+		query: queryIndex === -1 ? '' : withoutFragment.slice(queryIndex + 1),
+		fragment
+	};
+}
+
+function getPathExtension(path: string): string {
+	const basename = path.split('/').pop() ?? '';
+	const extensionIndex = basename.lastIndexOf('.');
+	return extensionIndex === -1 ? '' : basename.slice(extensionIndex).toLowerCase();
+}
+
+function isRelativeLocalReference(value: string): boolean {
+	const trimmed = value.trim();
+	return Boolean(trimmed)
+		&& !trimmed.startsWith('#')
+		&& !trimmed.startsWith('/')
+		&& !trimmed.startsWith('//')
+		&& !/^[a-z][a-z0-9+.-]*:/i.test(trimmed);
+}
+
+function isUriWithinRoot(uri: vscode.Uri, root: vscode.Uri): boolean {
+	if (uri.scheme !== root.scheme || uri.authority !== root.authority) {
+		return false;
+	}
+
+	const rootPath = root.path.replace(/\/+$/, '');
+	const uriPath = uri.path.replace(/\/+$/, '');
+
+	if (!rootPath || rootPath === '/') {
+		return uri.path.startsWith('/');
+	}
+
+	return uriPath === rootPath || uri.path.startsWith(`${rootPath}/`);
+}
+
+function resolveTemplateResourceUri(templateDirectoryUri: vscode.Uri, value: string): vscode.Uri | undefined {
+	const trimmed = value.trim();
+
+	if (!isRelativeLocalReference(trimmed)) {
+		return undefined;
+	}
+
+	const { path, query, fragment } = splitResourceReference(trimmed);
+
+	let segments: string[];
+	try {
+		segments = path.split('/').map(segment => decodeURIComponent(segment));
+	} catch {
+		return undefined;
+	}
+
+	const uri = vscode.Uri.joinPath(templateDirectoryUri, ...segments).with({ query, fragment });
+	return isUriWithinRoot(uri, templateDirectoryUri) ? uri : undefined;
+}
+
+function cssString(value: string): string {
+	return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function htmlAttribute(value: string): string {
+	return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+function isCssImportUrl(css: string, offset: number): boolean {
+	const beforeUrl = css.slice(0, offset);
+	const statementStart = Math.max(
+		beforeUrl.lastIndexOf(';'),
+		beforeUrl.lastIndexOf('{'),
+		beforeUrl.lastIndexOf('}')
+	) + 1;
+
+	return /@import\s*$/i.test(beforeUrl.slice(statementStart));
+}
+
+function rewriteResourceReference(
+	value: string,
+	templateDirectoryUri: vscode.Uri,
+	webview: Pick<vscode.Webview, 'asWebviewUri'>
+): string | undefined {
+	const uri = resolveTemplateResourceUri(templateDirectoryUri, value);
+	return uri ? webview.asWebviewUri(uri).toString() : undefined;
+}
+
+function rewriteCssImportStrings(
+	css: string,
+	templateDirectoryUri: vscode.Uri,
+	webview: Pick<vscode.Webview, 'asWebviewUri'>
+): string {
+	return css.replace(cssImportStringPattern, (match, _quote: string, value: string) => {
+		const { path } = splitResourceReference(value.trim());
+
+		if (!supportedStylesheetExtensions.has(getPathExtension(path))) {
+			return match;
+		}
+
+		const rewritten = rewriteResourceReference(value, templateDirectoryUri, webview);
+		return rewritten ? `@import url("${cssString(rewritten)}")` : match;
+	});
+}
+
+function rewriteCssUrls(
+	css: string,
+	templateDirectoryUri: vscode.Uri,
+	webview: Pick<vscode.Webview, 'asWebviewUri'>
+): string {
+	return rewriteCssImportStrings(css, templateDirectoryUri, webview).replace(cssUrlPattern, (match, doubleQuoted: string | undefined, singleQuoted: string | undefined, unquoted: string | undefined, offset: number, currentCss: string) => {
+		const value = doubleQuoted ?? singleQuoted ?? unquoted ?? '';
+		const { path } = splitResourceReference(value.trim());
+		const extension = getPathExtension(path);
+
+		if (!supportedFontExtensions.has(extension)
+			&& !(supportedStylesheetExtensions.has(extension) && isCssImportUrl(currentCss, offset))) {
+			return match;
+		}
+
+		const rewritten = rewriteResourceReference(value, templateDirectoryUri, webview);
+		return rewritten ? `url("${cssString(rewritten)}")` : match;
+	});
+}
+
+function getHtmlAttribute(tag: string, name: string): string | undefined {
+	const pattern = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i');
+	const match = tag.match(pattern);
+	return match?.[1] ?? match?.[2] ?? match?.[3];
+}
+
+function rewriteStylesheetLinks(
+	body: string,
+	templateDirectoryUri: vscode.Uri,
+	webview: Pick<vscode.Webview, 'asWebviewUri'>
+): string {
+	return body.replace(/<link\b[^>]*>/gi, tag => {
+		const rel = getHtmlAttribute(tag, 'rel');
+		const href = getHtmlAttribute(tag, 'href');
+
+		if (!rel || !href || !/\bstylesheet\b/i.test(rel)) {
+			return tag;
+		}
+
+		const { path } = splitResourceReference(href.trim());
+
+		if (!supportedStylesheetExtensions.has(getPathExtension(path))) {
+			return tag;
+		}
+
+		const rewritten = rewriteResourceReference(href, templateDirectoryUri, webview);
+		return rewritten
+			? tag.replace(/\bhref\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/i, `href="${htmlAttribute(rewritten)}"`)
+			: tag;
+	});
+}
+
+export function rewriteLocalFontUrls(
+	body: string,
+	templateUri: vscode.Uri,
+	webview: Pick<vscode.Webview, 'asWebviewUri'>
+): string {
+	const templateDirectoryUri = getDirectoryUri(templateUri);
+
+	return rewriteStylesheetLinks(body, templateDirectoryUri, webview)
+		.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi, (_match, open: string, css: string, close: string) =>
+			`${open}${rewriteCssUrls(css, templateDirectoryUri, webview)}${close}`
+		)
+		.replace(/(\sstyle\s*=\s*)(?:"([^"]*)"|'([^']*)')/gi, (match, prefix: string, doubleQuoted: string | undefined, singleQuoted: string | undefined) => {
+			const quote = doubleQuoted === undefined ? "'" : '"';
+			const css = doubleQuoted ?? singleQuoted;
+
+			if (css === undefined) {
+				return match;
+			}
+
+			return `${prefix}${quote}${rewriteCssUrls(css, templateDirectoryUri, webview)}${quote}`;
+		});
+}
+
+export function renderWebviewDocument(webview: WebviewResourceAdapter, body: string, templateUri?: vscode.Uri): string {
+	const renderedBody = templateUri ? rewriteLocalFontUrls(body, templateUri, webview) : body;
 	const contentSecurityPolicy = [
 		"default-src 'none'",
 		`img-src ${webview.cspSource} https: data:`,
+		`font-src ${webview.cspSource}`,
 		`style-src ${webview.cspSource} 'unsafe-inline'`
 	].join("; ");
 
@@ -67,7 +269,7 @@ function renderWebviewDocument(webview: vscode.Webview, body: string): string {
 	<title>Handlebars HTML Preview</title>
 </head>
 <body>
-${body}
+${renderedBody}
 </body>
 </html>`;
 }
@@ -78,6 +280,7 @@ export class PreviewPanel {
 	public static readonly viewType = 'handlebars';
 
 	private readonly _panel: vscode.WebviewPanel;
+	private readonly _extensionUri: vscode.Uri;
 	private _templateUri: vscode.Uri | undefined;
 	private _dataUri: vscode.Uri | undefined;
 	private _disposables: vscode.Disposable[] = [];
@@ -89,11 +292,8 @@ export class PreviewPanel {
 			vscode.window.registerWebviewPanelSerializer(PreviewPanel.viewType, {
 				async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
 					// Reset the webview options so we use latest uri for `localResourceRoots`.
-					webviewPanel.webview.options = {
-						enableScripts: false,
-						localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')]
-					};
-					PreviewPanel.revive(webviewPanel);
+					webviewPanel.webview.options = getWebviewOptions(context.extensionUri);
+					PreviewPanel.revive(webviewPanel, context.extensionUri);
 				}
 			});
 		}
@@ -114,12 +314,12 @@ export class PreviewPanel {
 			getWebviewOptions(extensionUri),
 		);
 
-		PreviewPanel.currentPanel = new PreviewPanel(panel);
+		PreviewPanel.currentPanel = new PreviewPanel(panel, extensionUri);
 		return PreviewPanel.currentPanel.update({ useActiveEditor: true });
 	}
 
-	public static revive(panel: vscode.WebviewPanel) {
-		PreviewPanel.currentPanel = new PreviewPanel(panel);
+	public static revive(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+		PreviewPanel.currentPanel = new PreviewPanel(panel, extensionUri);
 	}
 
 	public static update() {
@@ -147,8 +347,9 @@ export class PreviewPanel {
 		}
 	}
 
-	private constructor(panel: vscode.WebviewPanel) {
+	private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
 		this._panel = panel;
+		this._extensionUri = extensionUri;
 
 		// Set the webview's initial html content
 		void this.update({ useActiveEditor: true });
@@ -187,7 +388,7 @@ export class PreviewPanel {
 	private async update(options: { useActiveEditor: boolean }): Promise<string> {
 		const updateSequence = ++this._updateSequence;
 		const body = await this.generateHtmlPreview(options.useActiveEditor);
-		const html = renderWebviewDocument(this._panel.webview, body);
+		const html = renderWebviewDocument(this._panel.webview, body, this._templateUri);
 
 		if (updateSequence === this._updateSequence) {
 			this._panel.webview.html = html;
@@ -238,6 +439,7 @@ export class PreviewPanel {
 	private setPreviewSource(templateUri: vscode.Uri) {
 		this._templateUri = templateUri;
 		this._dataUri = getDataUriForTemplate(templateUri, getDataFileSuffix());
+		this._panel.webview.options = getWebviewOptions(this._extensionUri, templateUri);
 	}
 
 	private refreshDataUri() {
