@@ -25,7 +25,7 @@ Runs in VS Code desktop, remote workspaces, and VS Code for the Web.
 - Use the keybinding `ctrl+k h`.
 - To run from the command palette, use `ctrl+shift+p` and type `Handlebars: Open Preview`.
 - By default, preview data is read from the template file name plus `.json`, such as `email.handlebars.json`.
-- To register partials for preview rendering, run `Handlebars: Load Partials` and select one or more partial files. Each partial is available by its file basename.
+- To register partials for preview rendering, run `Handlebars: Load Partials` and select one or more partial files. Each partial is available by its file basename, and edits to selected partials refresh the active preview.
 - Local font files referenced from inline styles, `<style>` blocks, local stylesheet links, or local CSS imports can load when they are inside the template directory. Supported font file extensions are `.woff`, `.woff2`, `.ttf`, `.otf`, and `.eot`.
 
 ## Custom helpers

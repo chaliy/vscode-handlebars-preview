@@ -3,6 +3,20 @@ import * as vscode from 'vscode';
 import * as extension from "../../extension";
 import * as assert from "./assertions";
 
+function basenameWithoutExtension(uri: vscode.Uri): string {
+	const basename = uri.path.split('/').pop() ?? '';
+	return basename.replace(/\.[^/.]+$/, '');
+}
+
+function fullDocumentRange(document: vscode.TextDocument): vscode.Range {
+	const lastLine = document.lineAt(document.lineCount - 1);
+	return new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
+}
+
+function delay(ms: number): Promise<void> {
+	return new Promise(resolve => globalThis.setTimeout(resolve, ms));
+}
+
 suite('extension', () => {
 	test('activation', () => {
 		assert.ok(extension.activate);
@@ -58,5 +72,45 @@ suite('extension', () => {
 		assert.match(html, /font-src/);
 		assert.match(html, /preview-local\.woff2/);
 		assert.doesNotMatch(html, /url\("\.\/fonts\/preview-local\.woff2"\)/);
+	});
+
+	test('refreshes preview when a configured partial document changes', async () => {
+		const previousPartials = vscode.workspace.getConfiguration("handlebars").get<string[]>("partials");
+		const partialDocument = await vscode.workspace.openTextDocument({
+			language: 'handlebars',
+			content: 'First'
+		});
+		const partialName = basenameWithoutExtension(partialDocument.uri);
+		const templateDocument = await vscode.workspace.openTextDocument({
+			language: 'handlebars',
+			content: `Hello {{> ${partialName}}}!`
+		});
+
+		try {
+			await vscode.workspace
+				.getConfiguration("handlebars")
+				.update("partials", [partialDocument.uri.toString()], vscode.ConfigurationTarget.Global);
+
+			await vscode.window.showTextDocument(templateDocument);
+			const initialHtml = await vscode.commands.executeCommand<string>('handlebars.preview');
+
+			assert.ok(initialHtml);
+			assert.match(initialHtml, /Hello First!/);
+
+			await vscode.window.showTextDocument(partialDocument);
+			const edit = new vscode.WorkspaceEdit();
+			edit.replace(partialDocument.uri, fullDocumentRange(partialDocument), "Second");
+			assert.ok(await vscode.workspace.applyEdit(edit));
+
+			await delay(150);
+			const refreshedHtml = await vscode.commands.executeCommand<string>('handlebars.preview');
+
+			assert.ok(refreshedHtml);
+			assert.match(refreshedHtml, /Hello Second!/);
+		} finally {
+			await vscode.workspace
+				.getConfiguration("handlebars")
+				.update("partials", previousPartials, vscode.ConfigurationTarget.Global);
+		}
 	});
 });

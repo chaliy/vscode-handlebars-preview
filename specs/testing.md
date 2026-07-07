@@ -28,6 +28,9 @@ Define the minimum confidence expected before changes are shipped.
   behavior can be exercised by the extension test harness.
 - Preview command tests should assert that a `.handlebars` fixture renders with
   its adjacent JSON data, not only that the webview opens.
+- Partial preview tests should assert that changing a configured partial
+  refreshes the active template preview without switching the preview source to
+  the partial document.
 - Bug fixes should include regression tests when practical.
 - CI must run compile, lint, desktop tests, web tests, audit, and package
   validation for pull requests and pushes.

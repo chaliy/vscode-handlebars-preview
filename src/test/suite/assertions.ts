@@ -4,6 +4,12 @@ export function equal(actual: unknown, expected: unknown, message?: string): voi
 	}
 }
 
+export function deepEqual(actual: unknown, expected: unknown, message?: string): void {
+	if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+		throw new Error(message ?? `Expected ${JSON.stringify(actual)} to deep equal ${JSON.stringify(expected)}`);
+	}
+}
+
 export function ok(value: unknown, message?: string): asserts value {
 	if (!value) {
 		throw new Error(message ?? `Expected ${String(value)} to be truthy`);

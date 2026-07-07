@@ -6,13 +6,7 @@ import {
 import { PreviewPanel } from './lib/PreviewPanel';
 
 export function activate(context: ExtensionContext) {
-    const watcher = workspace.createFileSystemWatcher('**/*');
-
     context.subscriptions.push(
-        watcher,
-        watcher.onDidChange(uri => PreviewPanel.refreshForUri(uri)),
-        watcher.onDidCreate(uri => PreviewPanel.refreshForUri(uri)),
-        watcher.onDidDelete(uri => PreviewPanel.refreshForUri(uri)),
         window.onDidChangeActiveTextEditor(() => {
             PreviewPanel.updateFromActiveEditor();
         }),
