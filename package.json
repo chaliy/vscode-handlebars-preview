@@ -152,6 +152,7 @@
     "lint": "eslint src",
     "test": "vscode-test",
     "test:web": "npm run compile && npm run compile:web-test && vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=out/web/test/extensionTests.js .",
+    "release:check": "npm run compile && npm run lint && npm test && npm run test:web && npm run package",
     "publish": "vsce publish",
     "package": "vsce package"
   },
