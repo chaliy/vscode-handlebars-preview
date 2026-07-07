@@ -58,6 +58,40 @@ function getUnsafeHelpersConfiguration(): { enabled: boolean; file: string } {
 	};
 }
 
+export function sanitizeBackgroundColor(value: string | undefined): string | undefined {
+	const color = value?.trim();
+
+	if (!color) {
+		return undefined;
+	}
+
+	if (/^#[\da-f]{3,4}(?:[\da-f]{3,4})?$/i.test(color)) {
+		return color;
+	}
+
+	if (/^[a-z]+$/i.test(color)) {
+		return color;
+	}
+
+	const number = String.raw`(?:\d+|\d*\.\d+)`;
+	const rgbChannel = String.raw`${number}%?`;
+	const alphaChannel = String.raw`${number}%?`;
+	const hue = String.raw`${number}(?:deg|grad|rad|turn)?`;
+	const percentage = String.raw`${number}%`;
+	const rgbPattern = new RegExp(String.raw`^rgba?\(\s*${rgbChannel}\s*,\s*${rgbChannel}\s*,\s*${rgbChannel}(?:\s*,\s*${alphaChannel})?\s*\)$`, 'i');
+	const hslPattern = new RegExp(String.raw`^hsla?\(\s*${hue}\s*,\s*${percentage}\s*,\s*${percentage}(?:\s*,\s*${alphaChannel})?\s*\)$`, 'i');
+
+	return rgbPattern.test(color) || hslPattern.test(color) ? color : undefined;
+}
+
+function getBackgroundColor(): string | undefined {
+	const configured = vscode.workspace
+		.getConfiguration('handlebarsPreview')
+		.get<string>('backgroundColor');
+
+	return sanitizeBackgroundColor(configured);
+}
+
 async function resolveUriOrText(uri: vscode.Uri): Promise<string> {
 	const document = vscode.workspace.textDocuments.find(e => uriEquals(e.uri, uri));
 
@@ -309,7 +343,12 @@ export function rewriteLocalFontUrls(
 		});
 }
 
-export function renderWebviewDocument(webview: WebviewResourceAdapter, body: string, templateUri?: vscode.Uri): string {
+export function renderWebviewDocument(
+	webview: WebviewResourceAdapter,
+	body: string,
+	templateUri?: vscode.Uri,
+	backgroundColor?: string
+): string {
 	const renderedBody = templateUri ? rewriteLocalFontUrls(body, templateUri, webview) : body;
 	const contentSecurityPolicy = [
 		"default-src 'none'",
@@ -317,6 +356,8 @@ export function renderWebviewDocument(webview: WebviewResourceAdapter, body: str
 		`font-src ${webview.cspSource}`,
 		`style-src ${webview.cspSource} 'unsafe-inline'`
 	].join("; ");
+	const safeBackgroundColor = sanitizeBackgroundColor(backgroundColor);
+	const bodyAttributes = safeBackgroundColor ? ` style="background-color: ${safeBackgroundColor};"` : "";
 
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -326,7 +367,7 @@ export function renderWebviewDocument(webview: WebviewResourceAdapter, body: str
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Handlebars HTML Preview</title>
 </head>
-<body>
+<body${bodyAttributes}>
 ${renderedBody}
 </body>
 </html>`;
@@ -447,7 +488,7 @@ export class PreviewPanel {
 	private async update(options: { useActiveEditor: boolean }): Promise<string> {
 		const updateSequence = ++this._updateSequence;
 		const body = await this.generateHtmlPreview(options.useActiveEditor);
-		const html = renderWebviewDocument(this._panel.webview, body, this._templateUri);
+		const html = renderWebviewDocument(this._panel.webview, body, this._templateUri, getBackgroundColor());
 
 		if (updateSequence === this._updateSequence) {
 			this._panel.webview.html = html;
