@@ -1,28 +1,67 @@
-# Change Log
+# Changelog
+
+## [Unreleased]
 
 ## [2.0.0] - Unreleased
-- Breaking change: minimum supported VS Code version is now 1.125.0.
-- Upgrade TypeScript, ESLint, VS Code test tooling, and VS Code API types.
-- Replace webpack with an esbuild bundle that also exposes a VS Code Web `browser` entry.
-- Use VS Code URI and workspace filesystem APIs so previews work in web and virtual workspaces.
-- Add browser-based VS Code Web tests with `npm run test:web`.
-- Add `.handlebars` and `.hbs` language contributions and a configurable preview data suffix.
-- Refresh previews when the template or adjacent JSON data file changes on disk.
-- Harden preview webviews by disabling scripts and adding a restrictive content security policy.
-- Support local `@font-face` fonts referenced from the active template directory.
-- Escape renderer error output before showing it in the preview.
-- Replace the legacy `glob` test dependency with a local test-file loader.
-- Remove the legacy custom `@vscode/test-electron` runner entrypoint.
-- Add regression coverage for missing/invalid JSON context, escaped render errors, preview command wiring, and rendered preview output.
-- Add GitHub Actions CI for compile, lint, desktop tests, web tests, audit, and package validation.
-- Add `Handlebars: Load Partials` for workspace-configured partial files.
-- Refresh previews when configured partial files change, without watching the
-  entire workspace.
-- Add opt-in custom helper loading for trusted desktop workspaces through
-  `handlebarsPreview.unsafeHelpers.*` settings.
-- Add `handlebarsPreview.backgroundColor` to override the preview webview background.
-- Add built-in `compare`, `eq`, and safe identity `eval` compatibility helpers.
-- Add `Handlebars: Open Source Preview` to inspect escaped generated output and preserve whitespace for non-HTML text/code rendering.
+
+### Highlights
+
+- **VS Code Web and virtual workspace support** - the extension now uses VS Code
+  URI and workspace filesystem APIs, exposes a browser entry point, and includes
+  browser-based tests with `npm run test:web`.
+- **Richer live preview inputs** - previews can load selected partials, read a
+  configurable data-file suffix, watch template/data/partial edits, and load
+  local `@font-face` assets from the template directory.
+- **Safer preview rendering** - webviews run with scripts disabled, use a
+  restrictive content security policy, and escape renderer error output before
+  showing it in the preview.
+- **Helper compatibility** - built-in `compare`, `eq`, and safe identity `eval`
+  helpers are available by default, with opt-in custom helper loading for
+  trusted desktop workspaces.
+- **Source preview mode** - `Handlebars: Open Source Preview` shows escaped
+  generated output while preserving whitespace for non-HTML text/code rendering.
+- **Modern maintenance and release automation** - the project now builds with
+  esbuild, runs GitHub Actions CI for compile/lint/tests/audit/package
+  validation, and creates tagged GitHub Releases with automatic Marketplace
+  publishing.
+
+### Breaking Changes
+
+- **Minimum supported VS Code version is now 1.125.0.** Users on older VS Code
+  versions must upgrade before installing this release.
+
+### What's Changed
+
+* build: upgrade TypeScript, ESLint, VS Code test tooling, and VS Code API types
+* build: replace webpack with an esbuild bundle and VS Code Web browser entry
+* feat(preview): support VS Code Web and virtual workspaces
+* feat(preview): add `.handlebars` and `.hbs` language contributions
+* feat(preview): add configurable preview data suffix
+* feat(preview): refresh when templates or adjacent JSON data files change
+* feat(preview): load selected workspace partial files and refresh on edits
+* feat(preview): support local `@font-face` fonts from the template directory
+* feat(preview): add configurable preview webview background color
+* feat(preview): add opt-in trusted workspace custom helper loading
+* feat(preview): add source preview mode for escaped generated output
+* fix(preview): disable webview scripts and add a restrictive content security policy
+* fix(preview): escape renderer error output before showing it
+* fix(preview): add built-in `compare`, `eq`, and safe identity `eval` helpers
+* test: add browser-based VS Code Web tests
+* test: add regression coverage for JSON context, escaped render errors, command wiring, and rendered preview output
+* test: replace the legacy `glob` dependency with a local test-file loader
+* test: remove the legacy custom `@vscode/test-electron` runner entrypoint
+* ci: add GitHub Actions CI for compile, lint, desktop tests, web tests, audit, and package validation
+* ci: add tagged GitHub Release and Marketplace publishing workflows
+
+**Full Changelog**: https://github.com/chaliy/vscode-handlebars-preview/compare/v1.3.2...v2.0.0
+
+## [1.3.2] - 2026-07-04
+
+### What's Changed
+
+* chore(release): refresh package metadata for Marketplace publishing
+
+**Full Changelog**: https://github.com/chaliy/vscode-handlebars-preview/compare/v1.3.1...v1.3.2
 
 ## [1.3.1] - 2022-07-19
 - Extension now contributes to Explorer context menu

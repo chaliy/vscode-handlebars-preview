@@ -24,6 +24,7 @@ export default [
         console: 'readonly',
         process: 'readonly',
         suite: 'readonly',
+        teardown: 'readonly',
         test: 'readonly'
       }
     },

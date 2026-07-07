@@ -18,6 +18,10 @@ function delay(ms: number): Promise<void> {
 }
 
 suite('extension', () => {
+	teardown(async () => {
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+	});
+
 	test('activation', () => {
 		assert.ok(extension.activate);
 	});

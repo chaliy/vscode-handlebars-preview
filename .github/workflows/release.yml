@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    if: "${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'chore(release): prepare v') }}"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+              echo "Error: manual releases must run from refs/heads/$DEFAULT_BRANCH"
+              exit 1
+            fi
+            VERSION=$(node -p "require('./package.json').version")
+          else
+            FIRST_LINE=$(printf '%s\n' "$COMMIT_MSG" | head -1)
+            VERSION=$(printf '%s\n' "$FIRST_LINE" | sed -n 's/^chore(release): prepare v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')
+          fi
+
+          if [ -z "$VERSION" ]; then
+            echo "Error: could not determine release version"
+            exit 1
+          fi
+
+          {
+            echo "version=$VERSION"
+            echo "tag=v$VERSION"
+          } >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
+
+      - name: Verify version metadata
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          LOCK_VERSION=$(node -p "require('./package-lock.json').packages[''].version")
+
+          if [ "$VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "Error: release version $VERSION does not match package.json $PACKAGE_VERSION"
+            exit 1
+          fi
+
+          if [ "$VERSION" != "$LOCK_VERSION" ]; then
+            echo "Error: release version $VERSION does not match package-lock.json $LOCK_VERSION"
+            exit 1
+          fi
+
+          if ! grep -Fq "## [$VERSION]" CHANGELOG.md; then
+            echo "Error: CHANGELOG.md is missing a ## [$VERSION] section"
+            exit 1
+          fi
+
+          echo "Version metadata verified: $VERSION"
+
+      - name: Verify release source is on default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git fetch --force origin "$DEFAULT_BRANCH:refs/remotes/origin/$DEFAULT_BRANCH"
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT_BRANCH"; then
+            echo "Error: release source $GITHUB_SHA is not reachable from origin/$DEFAULT_BRANCH"
+            exit 1
+          fi
+          echo "Release source $GITHUB_SHA is reachable from origin/$DEFAULT_BRANCH"
+
+      - name: Extract release notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          awk -v version="$VERSION" '
+            index($0, "## [" version "]") == 1 { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+
+          if [ ! -s release_notes.md ]; then
+            echo "Error: CHANGELOG.md section for $VERSION has no release notes"
+            exit 1
+          fi
+
+          echo "Release notes extracted for v$VERSION"
+
+      - name: Create and verify tag
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          REMOTE_TAG_SHA=$(git ls-remote origin "refs/tags/$TAG" | awk '{print $1}')
+
+          if [ -n "$REMOTE_TAG_SHA" ]; then
+            git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+            TAG_SHA=$(git rev-list -n 1 "$TAG")
+            if [ "$TAG_SHA" != "$GITHUB_SHA" ]; then
+              echo "Error: existing tag $TAG points to $TAG_SHA, expected $GITHUB_SHA"
+              exit 1
+            fi
+            echo "Existing tag $TAG verified at $GITHUB_SHA"
+          else
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "$TAG"
+            echo "Created tag $TAG at $GITHUB_SHA"
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "Release $TAG" --notes-file release_notes.md
+          else
+            gh release create "$TAG" --title "Release $TAG" --notes-file release_notes.md --verify-tag
+          fi
+
+      - name: Verify release tag points to this commit
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          TAG_SHA=$(git rev-list -n 1 "$TAG")
+          if [ "$TAG_SHA" != "$GITHUB_SHA" ]; then
+            echo "Error: release tag $TAG points to $TAG_SHA, expected $GITHUB_SHA"
+            exit 1
+          fi
+          echo "Release tag $TAG verified at $TAG_SHA"
+
+      - name: Trigger Marketplace publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          gh workflow run publish.yml --ref "$TAG"
