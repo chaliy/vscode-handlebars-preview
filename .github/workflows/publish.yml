@@ -102,7 +102,7 @@ jobs:
       - name: Publish to Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: npm run publish -- --packagePath "${{ steps.validate.outputs.vsix }}"
+        run: npm run publish -- --packagePath "${{ steps.validate.outputs.vsix }}" --skip-duplicate
 
       - name: Verify Marketplace version
         run: |
@@ -112,7 +112,7 @@ jobs:
           SLEEP_SECONDS=10
 
           for attempt in $(seq 1 "$ATTEMPTS"); do
-            ACTUAL=$(npx --no-install vsce show "$EXTENSION_ID" --json 2>/dev/null | node -e "let input=''; process.stdin.on('data', c => input += c); process.stdin.on('end', () => { try { const data = JSON.parse(input); console.log(data.version || 'not found'); } catch { console.log('not found'); } });")
+            ACTUAL=$(npx --no-install vsce show "$EXTENSION_ID" --json 2>/dev/null | node -e "let input=''; process.stdin.on('data', c => input += c); process.stdin.on('end', () => { try { const data = JSON.parse(input); console.log(data.version || data.versions?.[0]?.version || 'not found'); } catch { console.log('not found'); } });")
 
             if [ "$ACTUAL" = "$EXPECTED" ]; then
               echo "$EXTENSION_ID@$ACTUAL is visible on the Marketplace"
