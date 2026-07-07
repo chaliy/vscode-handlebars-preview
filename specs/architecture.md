@@ -31,6 +31,8 @@ work stays small, testable, and aligned with VS Code extension behavior.
 - Webview output should be generated from compiled Handlebars and the matching
   JSON context; missing or invalid context should fail predictably and be
   covered by tests.
+- The renderer registers built-in `compare`, `eq`, and safe identity `eval`
+  helpers on each isolated Handlebars instance for template compatibility.
 - Preview updates should refresh when the active template, its open text
   document, or its adjacent data file changes.
 - Configured partial files are loaded by the preview panel and passed into the

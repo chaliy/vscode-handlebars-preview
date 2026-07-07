@@ -19,6 +19,7 @@
 - Add opt-in custom helper loading for trusted desktop workspaces through
   `handlebarsPreview.unsafeHelpers.*` settings.
 - Add `handlebarsPreview.backgroundColor` to override the preview webview background.
+- Add built-in `compare`, `eq`, and safe identity `eval` compatibility helpers.
 
 ## [1.3.1] - 2022-07-19
 - Extension now contributes to Explorer context menu
