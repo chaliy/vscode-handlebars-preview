@@ -18,6 +18,7 @@
 - Add `Handlebars: Load Partials` for workspace-configured partial files.
 - Add opt-in custom helper loading for trusted desktop workspaces through
   `handlebarsPreview.unsafeHelpers.*` settings.
+- Add `handlebarsPreview.backgroundColor` to override the preview webview background.
 
 ## [1.3.1] - 2022-07-19
 - Extension now contributes to Explorer context menu
