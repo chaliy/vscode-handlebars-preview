@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Stable vX.Y.Z tag to publish. Leave blank to use the selected ref.
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -18,6 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
           fetch-depth: 0
 
       - name: Validate release tag
@@ -25,13 +31,23 @@ jobs:
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           GITHUB_REF: ${{ github.ref }}
+          REQUESTED_TAG: ${{ github.event.inputs.tag }}
         run: |
-          if [[ ! "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Error: publish must run from a stable vX.Y.Z tag"
+          if [ -n "$REQUESTED_TAG" ]; then
+            TAG="${REQUESTED_TAG#refs/tags/}"
+          else
+            if [[ ! "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Error: publish must run from a stable vX.Y.Z tag"
+              exit 1
+            fi
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: publish tag must be a stable vX.Y.Z tag"
             exit 1
           fi
 
-          TAG="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG#v}"
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           LOCK_VERSION=$(node -p "require('./package-lock.json').packages[''].version")
