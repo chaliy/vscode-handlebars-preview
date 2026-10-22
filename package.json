@@ -173,10 +173,11 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "handlebars": "^4.7.7"
+    "handlebars": "^4.7.10"
   },
   "overrides": {
     "diff": "^9.0.0",
-    "serialize-javascript": "^7.0.7"
+    "serialize-javascript": "^7.0.7",
+    "markdown-it": "^14.3.3"
   }
 }

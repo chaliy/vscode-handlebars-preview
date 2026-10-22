@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Update Handlebars to 4.7.10 and refresh packaging dependencies, including
+  markdown-it 14.3.3, to include upstream security fixes.
+- Use patched Node 26.12.1 for CI and publishing builds.
+
 ## [2.0.0] - Unreleased
 
 ### Highlights
