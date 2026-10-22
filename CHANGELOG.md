@@ -2,9 +2,23 @@
 
 ## [Unreleased]
 
-- Update Handlebars to 4.7.10 and refresh packaging dependencies, including
-  markdown-it 14.3.3, to include upstream security fixes.
-- Use patched Node 26.12.1 for CI and publishing builds.
+## [2.0.1] - 2026-10-22
+
+### Highlights
+
+- **Security maintenance** - update Handlebars to 4.7.10 and refresh the
+  extension packaging and test dependencies. The packaging graph no longer
+  includes vulnerable markdown-it or braces dependencies.
+- **Patched release builds** - use Node 26.12.1 for CI and Marketplace
+  publishing. The minimum supported VS Code version remains 1.125.0.
+
+### What's Changed
+
+* fix(deps): update preview and packaging security dependencies ([#29](https://github.com/chaliy/vscode-handlebars-preview/pull/29)) by @chaliy
+* fix(release): allow tag-based publish recovery ([#28](https://github.com/chaliy/vscode-handlebars-preview/pull/28)) by @chaliy
+* fix(ci): verify marketplace version from vsce metadata by @chaliy
+
+**Full Changelog**: https://github.com/chaliy/vscode-handlebars-preview/compare/v2.0.0...v2.0.1
 
 ## [2.0.0] - Unreleased
 

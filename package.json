@@ -2,7 +2,7 @@
   "name": "handlebars-preview",
   "displayName": "Handlebars Preview",
   "description": "Live preview for Handlebar templates",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "publisher": "chaliy",
   "license": "MIT",
   "engines": {
